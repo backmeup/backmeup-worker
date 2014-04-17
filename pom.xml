@@ -41,6 +41,7 @@
 		<version.ch.qos.logback>1.0.0</version.ch.qos.logback>
 		<version.com.rabbitmq>2.8.6</version.com.rabbitmq>
 		<version.junit>4.11</version.junit>
+		<version.org.apache.felix>4.0.2</version.org.apache.felix>
 		<version.org.apache.httpcomponents>4.1.2</version.org.apache.httpcomponents>
 		<version.org.elasticsearch>0.90.7</version.org.elasticsearch>
 		<version.org.slf4j>1.7.5</version.org.slf4j>
