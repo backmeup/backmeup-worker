@@ -1,10 +1,13 @@
 package org.backmeup.job.impl.rabbitmq;
 
 import java.io.IOException;
+import java.util.Vector;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.backmeup.job.impl.JobReceivedEvent;
+import org.backmeup.job.impl.JobReceivedListener;
 import org.backmeup.job.impl.JobReceiver;
 import org.backmeup.model.BackupJob;
 import org.backmeup.model.exceptions.BackMeUpException;
@@ -36,6 +39,8 @@ public class RabbitMQJobReceiver implements JobReceiver{
 	private AtomicBoolean stopReceiver;
 	private AtomicBoolean pauseReceiver;
 	private AtomicInteger pauseInterval;
+	
+	private Vector<JobReceivedListener> listeners;
 
 	public RabbitMQJobReceiver(String mqHostAdr, String mqName, int waitInterval) {
 		this.mqName = mqName;
@@ -45,6 +50,8 @@ public class RabbitMQJobReceiver implements JobReceiver{
 		this.stopReceiver = new AtomicBoolean(false);
 		this.pauseReceiver = new AtomicBoolean(false);
 		this.pauseInterval = new AtomicInteger(waitInterval);
+		
+		this.listeners = new Vector<JobReceivedListener>();
 	}
 
 	
@@ -101,7 +108,7 @@ public class RabbitMQJobReceiver implements JobReceiver{
 									BackupJob job = JsonSerializer.deserialize(message, BackupJob.class);
 
 									if (!stopReceiver.get()) {
-										// fireEvent(new JobReceiverEvent(this, i, ticks));
+										 fireEvent(new JobReceivedEvent(this, job));
 									}
 								}
 							} catch (Exception ex) {
@@ -143,5 +150,23 @@ public class RabbitMQJobReceiver implements JobReceiver{
 	
 	public void pause() {
 		pauseReceiver.set(true);
+	}
+	
+	// Events -----------------------------------------------------------------
+	
+	protected void fireEvent(JobReceivedEvent jre){
+		@SuppressWarnings("unchecked")
+		Vector<JobReceivedListener> listenerClone = (Vector<JobReceivedListener>) listeners.clone();
+		for(JobReceivedListener l : listenerClone){
+			l.jobReceived(jre);
+		}
+	}
+
+	public void addJobReceivedListener(JobReceivedListener listener){
+		listeners.add(listener);
+	}
+
+	public void removeJobReceivedListener(JobReceivedListener listener){
+		listeners.remove(listener);
 	}
 }
