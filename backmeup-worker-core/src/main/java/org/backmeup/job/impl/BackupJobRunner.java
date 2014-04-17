@@ -98,7 +98,7 @@ public class BackupJobRunner {
 	}
 
 	private void storeJobProtocol(BackupJob job, JobProtocol protocol, int storedEntriesCount, boolean success) {
-		job = bmuService.findBackupJobById(job.getId());
+		job = bmuService.findBackupJobById(job.getUser().getUsername(), job.getId());
 
 		// remove old entries, then store the new one
 		bmuService.deleteJobProtocolByUsername(job.getUser().getUsername());
@@ -122,7 +122,7 @@ public class BackupJobRunner {
 	public void executeBackup(BackupJob job, Storage storage) {
 
 		// use the job which is stored within the database
-		BackupJob persistentJob = bmuService.findBackupJobById(job.getId());
+		BackupJob persistentJob = bmuService.findBackupJobById(job.getUser().getUsername(), job.getId());
 
 		// when will the next access to the access data occur? current time
 		// +

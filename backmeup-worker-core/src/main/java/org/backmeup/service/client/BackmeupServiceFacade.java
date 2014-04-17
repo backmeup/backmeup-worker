@@ -10,7 +10,7 @@ public interface BackmeupServiceFacade {
 	Status saveStatus(Status status);
 	void deleteStatusBefore(Long jobId, Date timeStamp);
 	
-	BackupJob findBackupJobById(Long jobId);
+	BackupJob findBackupJobById(String username, Long jobId);
 	BackupJob saveBackupJob(BackupJob backupJob);
 	
 	JobProtocol saveJobProtocol(JobProtocol protocol);
