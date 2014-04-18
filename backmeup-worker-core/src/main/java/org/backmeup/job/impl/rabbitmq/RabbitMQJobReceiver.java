@@ -28,11 +28,13 @@ import com.rabbitmq.client.QueueingConsumer;
 public class RabbitMQJobReceiver implements JobReceiver{
 	private final Logger logger = LoggerFactory.getLogger(RabbitMQJobReceiver.class);
 
-	private String mqName;
-	private String mqHost;
+	private final String mqName;
+	private final String mqHost;
+	
+	private boolean initialized;
 
-	private Connection mqConnection;
-	private Channel mqChannel;
+	private AtomicReference<Connection> mqConnection;
+	private AtomicReference<Channel> mqChannel;
 	private AtomicInteger mqTimeout;
 
 	private AtomicReference<Thread> receiverThread;
@@ -50,6 +52,12 @@ public class RabbitMQJobReceiver implements JobReceiver{
 		this.stopReceiver = new AtomicBoolean(false);
 		this.pauseReceiver = new AtomicBoolean(false);
 		this.pauseInterval = new AtomicInteger(waitInterval);
+		
+		this.mqChannel = new AtomicReference<>(null);
+		this.mqConnection = new AtomicReference<>(null);
+		this.receiverThread = new AtomicReference<>(null);
+		
+		this.initialized = false;
 		
 		this.listeners = new Vector<JobReceivedListener>();
 	}
@@ -74,9 +82,11 @@ public class RabbitMQJobReceiver implements JobReceiver{
 		try {
 			ConnectionFactory factory = new ConnectionFactory();
 			factory.setHost(mqHost);
-			mqConnection = factory.newConnection();
-			mqChannel = mqConnection.createChannel();
-			mqChannel.queueDeclare(mqName, false, false, false, null);
+			mqConnection.set(factory.newConnection());
+			mqChannel.set(mqConnection.get().createChannel());
+			mqChannel.get().queueDeclare(mqName, false, false, false, null);
+			
+			initialized = true;
 		} catch (IOException e) {
 			throw new BackMeUpException(e);
 		}
@@ -84,19 +94,22 @@ public class RabbitMQJobReceiver implements JobReceiver{
 	}
 
 	public void start() {
+		if (!initialized) {
+			throw new IllegalStateException("Cannot start: receiver is not initialized");
+		}
+		
 		if (isRunning()) {
-			throw new IllegalStateException(
-					"Cannot start: receiver is already running");
+			throw new IllegalStateException("Cannot start: receiver is already running");
 		}
 
 		receiverThread.set(new Thread(new Runnable() {
 			public void run() {
 				logger.info("Starting message queue receiver");
 				
-				QueueingConsumer consumer = new QueueingConsumer(mqChannel);
+				QueueingConsumer consumer = new QueueingConsumer(mqChannel.get());
 				
 				try {
-					mqChannel.basicConsume(mqName, true, consumer);
+					mqChannel.get().basicConsume(mqName, true, consumer);
 					while (!stopReceiver.get()) {
 						if(!pauseReceiver.get()) {
 							try {
@@ -125,8 +138,8 @@ public class RabbitMQJobReceiver implements JobReceiver{
 
 					logger.info("Stopping message queue receiver");
 
-					mqChannel.close();
-					mqConnection.close();
+					mqChannel.get().close();
+					mqConnection.get().close();
 
 				} catch (IOException e) {
 					// Should only happen if message queue is down
