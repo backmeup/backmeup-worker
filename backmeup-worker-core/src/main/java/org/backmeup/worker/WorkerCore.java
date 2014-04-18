@@ -77,7 +77,7 @@ public class WorkerCore {
 		this.jobReceiver = new RabbitMQJobReceiver(mqHost, mqName, mqWaitInterval);
 		this.jobQueue = new ArrayBlockingQueue<Runnable>(maxWorkerThreads); // 2
 		ThreadFactory threadFactory = Executors.defaultThreadFactory();
-		this.executorPool = new ThreadPoolExecutor(1, maxWorkerThreads, 10, TimeUnit.SECONDS, jobQueue, threadFactory);
+		this.executorPool = new ThreadPoolExecutor(maxWorkerThreads, maxWorkerThreads, 10, TimeUnit.SECONDS, jobQueue, threadFactory);
 		
 		this.initialized = false;
 		setCurrentState(WorkerState.Offline);
@@ -116,7 +116,7 @@ public class WorkerCore {
 		boolean errorsDuringInit = false;
 		
 		plugins.startup();
-		
+		jobReceiver.initialize();
 		jobReceiver.addJobReceivedListener(new JobReceivedListener() {
 
 			@Override
