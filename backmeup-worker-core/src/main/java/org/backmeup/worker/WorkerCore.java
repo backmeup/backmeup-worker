@@ -146,8 +146,9 @@ public class WorkerCore {
 	}
 	
 	public void shutdown() {
-		plugins.shutdown();
 		executorPool.shutdown();
+		plugins.shutdown();
+		jobReceiver.stop();
 	}
 	
 	// Private methods --------------------------------------------------------

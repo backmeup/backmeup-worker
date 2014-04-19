@@ -159,6 +159,13 @@ public class RabbitMQJobReceiver implements JobReceiver{
 
 	public void stop() {
 		stopReceiver.set(true);
+		try {
+			// Wait for thread to complete
+			receiverThread.get().join();
+		} catch (InterruptedException e) {
+			logger.error("", e);
+			throw new RuntimeException(e);
+		}
 	}
 	
 	public void pause() {
