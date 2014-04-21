@@ -96,6 +96,10 @@ public class WorkerCore {
 	public int getNoOfCurrentJobs() {
 		throw new UnsupportedOperationException();
 	}
+	
+	public int getNoOfMaximumJobs() {
+		return maxWorkerThreads;
+	}
 
 	public int getNoOfFinishedJobs() {
 		throw new UnsupportedOperationException();
@@ -121,11 +125,7 @@ public class WorkerCore {
 
 			@Override
 			public void jobReceived(JobReceivedEvent jre) {
-				noOfFetchedJobs.getAndIncrement();
-				
-				BackupJob backupJob = jre.getBackupJob();
-				Runnable backupJobWorker = new BackupJobWorkerThread(backupJob, plugins, indexHost, indexPort, jobTempDir, backupName);
-				executorPool.execute(backupJobWorker);
+				executeBackupJob(jre);
 			}
 			
 		});
@@ -153,16 +153,17 @@ public class WorkerCore {
 	
 	// Private methods --------------------------------------------------------
 	
-	private void executeBackupJob(BackupJob backupJob) {
-		Thread t = new Thread(new Runnable() {
-
-			@Override
-			public void run() {
-				// TODO Auto-generated method stub
-
-			}
-			
-		});
+	private void executeBackupJob(JobReceivedEvent jre) {
+		noOfFetchedJobs.getAndIncrement();
+		
+		// if we reached our maximum concurrent job limit, pause the receiver
+		if(getNoOfCurrentJobs() + 1 >= getNoOfMaximumJobs()) {
+			jobReceiver.setPaused(true);
+		}
+		
+		BackupJob backupJob = jre.getBackupJob();
+		Runnable backupJobWorker = new BackupJobWorkerThread(backupJob, plugins, indexHost, indexPort, jobTempDir, backupName);
+		executorPool.execute(backupJobWorker);
 	}
 	
 	// Nested classes and enums -----------------------------------------------
