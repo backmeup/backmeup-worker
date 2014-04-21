@@ -26,6 +26,8 @@ import com.rabbitmq.client.QueueingConsumer;
  * 
  */
 public class RabbitMQJobReceiver implements JobReceiver{
+	private static final int delayInterval = 500;
+
 	private final Logger logger = LoggerFactory.getLogger(RabbitMQJobReceiver.class);
 
 	private final String mqName;
@@ -71,6 +73,10 @@ public class RabbitMQJobReceiver implements JobReceiver{
 	
 	public boolean isPaused() {
 		return pauseReceiver.get();
+	}
+	
+	public void setPaused(boolean paused) {
+		pauseReceiver.set(paused);
 	}
 	
 	// Methods ----------------------------------------------------------------
@@ -119,10 +125,11 @@ public class RabbitMQJobReceiver implements JobReceiver{
 									logger.info("Job received: " + message);
 
 									BackupJob job = JsonSerializer.deserialize(message, BackupJob.class);
-
-									if (!stopReceiver.get()) {
-										 fireEvent(new JobReceivedEvent(this, job));
-									}
+									fireEvent(new JobReceivedEvent(this, job));
+									
+									// Delay further receiving to ge the callback listener a chance
+									// to react on (e.g. pause or stop)
+									Thread.sleep(delayInterval);
 								}
 							} catch (Exception ex) {
 								logger.error("Failed to receive job", ex);
@@ -166,10 +173,6 @@ public class RabbitMQJobReceiver implements JobReceiver{
 			logger.error("", e);
 			throw new RuntimeException(e);
 		}
-	}
-	
-	public void pause() {
-		pauseReceiver.set(true);
 	}
 	
 	// Events -----------------------------------------------------------------
