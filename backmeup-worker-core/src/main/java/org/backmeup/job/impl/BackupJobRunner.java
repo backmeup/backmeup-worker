@@ -181,8 +181,10 @@ public class BackupJobRunner {
 				try {
 					source.downloadAll(sourceProperties, sourceOptions, storage, new JobStatusProgressor(persistentJob, "datasource"));
 				} catch (StorageException e) {
+					logger.error("", e);
 					errorStatus.add(addStatusToDb(new Status(persistentJob, e.getMessage(), StatusType.DOWNLOAD_FAILED,	StatusCategory.WARNING, new Date())));
 				} catch (DatasourceException e) {
+					logger.error("", e);
 					errorStatus.add(addStatusToDb(new Status(persistentJob, e.getMessage(), StatusType.DOWNLOAD_FAILED, StatusCategory.WARNING, new Date())));
 				}
 
@@ -301,10 +303,12 @@ public class BackupJobRunner {
 				storage.close();
 			}
 		} catch (StorageException e) {
+			logger.error("", e);
 			// job failed, store job protocol within database
 			storeJobProtocol(persistentJob, protocol, 0, false);
 			errorStatus.add(addStatusToDb(new Status(persistentJob, e.getMessage(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date())));
 		} catch (Exception e) {
+			logger.error("", e);
 			storeJobProtocol(persistentJob, protocol, 0, false);
 			errorStatus.add(addStatusToDb(new Status(persistentJob, e.getMessage(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date())));
 		}

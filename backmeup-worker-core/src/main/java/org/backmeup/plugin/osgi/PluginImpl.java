@@ -121,8 +121,7 @@ public class PluginImpl implements Plugin {
 	}
 
 	public List<SourceSinkDescribable> getConnectedDatasources() {
-		Iterable<SourceSinkDescribable> sourceSinkDescs = services(
-				SourceSinkDescribable.class, null);
+		Iterable<SourceSinkDescribable> sourceSinkDescs = services( SourceSinkDescribable.class, null);
 		List<SourceSinkDescribable> result = new ArrayList<SourceSinkDescribable>();
 		for (SourceSinkDescribable ssd : sourceSinkDescs) {
 			if (ssd.getType() == Type.Source || ssd.getType() == Type.Both) {
@@ -192,8 +191,7 @@ public class PluginImpl implements Plugin {
 		return (T) Proxy.newProxyInstance(PluginImpl.class.getClassLoader(),
 				new Class[] { service }, new InvocationHandler() {
 
-			public Object invoke(Object o, Method method, Object[] os)
-					throws Throwable {
+			public Object invoke(Object o, Method method, Object[] os) throws Throwable {
 				ServiceReference ref = getReference(service, filter);
 				if (ref == null) {
 					throw new PluginUnavailableException(filter);
@@ -205,10 +203,10 @@ public class PluginImpl implements Plugin {
 				Object ret = null;
 				try {
 					ret = method.invoke(instance, os);
-				} catch (Throwable t) {
+				} catch (Exception e) {
 					throw new PluginException(filter,
 							"An exception occured during execution of the method "
-									+ method.getName(), t);
+									+ method.getName(), e);
 				} finally {
 					bundleContext().ungetService(ref);
 				}
@@ -260,8 +258,7 @@ public class PluginImpl implements Plugin {
 		return osgiFramework.getBundleContext();
 	}
 
-	private <T> ServiceReference getReference(final Class<T> service,
-			final String filter) {
+	private <T> ServiceReference getReference(final Class<T> service, final String filter) {
 		ServiceReference ref = null;
 		if (filter == null) {
 			ref = bundleContext().getServiceReference(service.getName());
@@ -269,9 +266,9 @@ public class PluginImpl implements Plugin {
 		} else {
 			ServiceReference[] refs;
 			try {
-				refs = bundleContext().getServiceReferences(service.getName(),
-						filter);
+				refs = bundleContext().getServiceReferences(service.getName(), filter);
 			} catch (InvalidSyntaxException e) {
+				logger.error("", e);
 				throw new IllegalArgumentException(String.format("The filter '%s' is mallformed.", filter));
 			}
 			if (refs != null && refs.length > 0) {
