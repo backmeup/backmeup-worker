@@ -4,57 +4,57 @@ import java.util.HashMap;
 import java.util.Properties;
 
 public class AuthData {
-  private Long bmu_authinfo_id;
-  private Long bmu_user_id;
-  private Long bmu_service_id;
-  private HashMap<String, String> ai_data = new HashMap<String, String>();
+  private Long bmuAuthinfoId;
+  private Long bmuUserId;
+  private Long bmuServiceId;
+  private HashMap<String, String> aiData = new HashMap<String, String>();
 
   public AuthData() {
     super();
   }
 
-  public AuthData(Long bmu_authinfo_id, Long bmu_user_id, Long bmu_service_id) {
+  public AuthData(Long bmuAuthinfoId, Long bmuUserId, Long bmuServiceId) {
     super();
-    this.bmu_authinfo_id = bmu_authinfo_id;
-    this.bmu_user_id = bmu_user_id;
-    this.bmu_service_id = bmu_service_id;
+    this.bmuAuthinfoId = bmuAuthinfoId;
+    this.bmuUserId = bmuUserId;
+    this.bmuServiceId = bmuServiceId;
   }
 
-  public Long getBmu_authinfo_id() {
-    return bmu_authinfo_id;
+  public Long getBmuAuthinfoId() {
+    return bmuAuthinfoId;
   }
 
-  public void setBmu_authinfo_id(Long bmu_authinfo_id) {
-    this.bmu_authinfo_id = bmu_authinfo_id;
+  public void setBmuAuthinfoId(Long bmuAuthinfoId) {
+    this.bmuAuthinfoId = bmuAuthinfoId;
   }
   
-  public Long getBmu_user_id() {
-    return bmu_user_id;
+  public Long getBmuUserId() {
+    return bmuUserId;
   }
 
-  public void setBmu_user_id(Long bmu_user_id) {
-    this.bmu_user_id = bmu_user_id;
+  public void setBmuUserId(Long bmuUserId) {
+    this.bmuUserId = bmuUserId;
   }
 
-  public Long getBmu_service_id() {
-    return bmu_service_id;
+  public Long getBmuServiceId() {
+    return bmuServiceId;
   }
 
-  public void setBmu_service_id(Long bmu_service_id) {
-    this.bmu_service_id = bmu_service_id;
+  public void setBmuServiceId(Long bmuServiceId) {
+    this.bmuServiceId = bmuServiceId;
   }
 
-  public HashMap<String, String> getAi_data() {
-    return ai_data;
+  public HashMap<String, String> getAiData() {
+    return aiData;
   }
 
-  public void setAi_data(HashMap<String, String> ai_data) {
-    this.ai_data = ai_data;
+  public void setAiData(HashMap<String, String> aiData) {
+    this.aiData = aiData;
   }
   
-  public Properties getAiData() {
+  public Properties getAiDataProperties() {
     Properties props = new Properties();
-    props.putAll(this.ai_data);
+    props.putAll(this.aiData);
     return props;
   }
 

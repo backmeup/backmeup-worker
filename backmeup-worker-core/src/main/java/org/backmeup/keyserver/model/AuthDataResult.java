@@ -8,27 +8,27 @@ import org.backmeup.model.Token;
 public class AuthDataResult {
 
   private Token newToken;  
-  private String encryption_pwd;
+  private String encryptionPwd;
   
   public static class UserData {
-    private Long bmu_user_id;
+    private Long bmuUserId;
     
 
-    public Long getBmu_user_id() {
-      return bmu_user_id;
+    public Long getBmuUserId() {
+      return bmuUserId;
     }
 
-    public void setBmu_user_id(Long bmu_user_id) {
-      this.bmu_user_id = bmu_user_id;
+    public void setBmuUserId(Long bmuUserId) {
+      this.bmuUserId = bmuUserId;
     }
 
     public UserData() {
       super();
     }
 
-    public UserData(Long bmu_user_id) {
+    public UserData(Long bmuUserId) {
       super();
-      this.bmu_user_id = bmu_user_id;
+      this.bmuUserId = bmuUserId;
     }
   }
 
@@ -74,18 +74,18 @@ public class AuthDataResult {
 
   public Properties getByProfileId(Long profileId) {
     for (int i = 0; i < authinfos.length; i++) {
-      if (authinfos[i].getBmu_authinfo_id().equals(profileId)) {
-        return authinfos[i].getAiData();
+      if (authinfos[i].getBmuAuthinfoId().equals(profileId)) {
+        return authinfos[i].getAiDataProperties();
       }
     }
     return new Properties();
   }
 
   public String getEncryptionPwd() {
-    return encryption_pwd;
+    return encryptionPwd;
   }
 
   public void setEncryptionPwd(String encryptionPwd) {
-    this.encryption_pwd = encryptionPwd;
+    this.encryptionPwd = encryptionPwd;
   }
 }
