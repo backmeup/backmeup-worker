@@ -313,7 +313,7 @@ public class BackupJobRunner {
 			errorStatus.add(addStatusToDb(new Status(persistentJob, e.getMessage(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date())));
 		}
 		// send error message, if there were any error status messages
-		if (errorStatus.size() > 0) {
+		if (!errorStatus.isEmpty()) {
 			bmuService.sendEmail(userEmail, MessageFormat.format(
 					textBundle.getString(ERROR_EMAIL_SUBJECT), userEmail),
 					MessageFormat.format(

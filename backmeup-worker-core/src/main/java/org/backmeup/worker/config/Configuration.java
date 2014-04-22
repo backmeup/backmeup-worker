@@ -6,7 +6,7 @@ import java.util.Properties;
 public final class Configuration {
 	private static final Properties properties = new Properties();
 	
-	public final static String PROPERTYFILE = "backmeup-worker.properties";
+	private static final String PROPERTYFILE = "backmeup-worker.properties";
 	
 	static {
 		try {

@@ -26,7 +26,7 @@ import com.rabbitmq.client.QueueingConsumer;
  * 
  */
 public class RabbitMQJobReceiver implements JobReceiver{
-	private static final int delayInterval = 500;
+	private static final int DELAY_INTERVAL = 500;
 
 	private final Logger logger = LoggerFactory.getLogger(RabbitMQJobReceiver.class);
 
@@ -129,7 +129,7 @@ public class RabbitMQJobReceiver implements JobReceiver{
 									
 									// Delay further receiving to ge the callback listener a chance
 									// to react on (e.g. pause or stop)
-									Thread.sleep(delayInterval);
+									Thread.sleep(DELAY_INTERVAL);
 								}
 							} catch (Exception ex) {
 								logger.error("Failed to receive job", ex);
@@ -139,6 +139,7 @@ public class RabbitMQJobReceiver implements JobReceiver{
 							try {
 								Thread.sleep(pauseInterval.get());
 							} catch (InterruptedException e) {
+								logger.error("",e);
 							}
 						}
 					}
@@ -151,7 +152,7 @@ public class RabbitMQJobReceiver implements JobReceiver{
 				} catch (IOException e) {
 					// Should only happen if message queue is down
 					logger.error("Message queue down", e);
-					throw new RuntimeException(e);
+					throw new BackMeUpException(e);
 				}
 
 				logger.info("Message queue receiver stopped");
@@ -171,7 +172,7 @@ public class RabbitMQJobReceiver implements JobReceiver{
 			receiverThread.get().join();
 		} catch (InterruptedException e) {
 			logger.error("", e);
-			throw new RuntimeException(e);
+			throw new BackMeUpException(e);
 		}
 	}
 	
