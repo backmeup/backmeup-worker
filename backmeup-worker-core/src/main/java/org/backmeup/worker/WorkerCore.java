@@ -4,7 +4,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -17,6 +16,8 @@ import org.backmeup.model.exceptions.BackMeUpException;
 import org.backmeup.plugin.Plugin;
 import org.backmeup.plugin.osgi.PluginImpl;
 import org.backmeup.worker.config.Configuration;
+import org.backmeup.worker.threadpool.ObservableThreadPoolExecutor;
+import org.backmeup.worker.threadpool.ThreadPoolListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,8 +28,9 @@ public class WorkerCore {
 	private WorkerState currentState;
 	
 	private int maxWorkerThreads;
-	private int currentWorkerThreads;
+	private AtomicInteger noOfRunningJobs;
 	private AtomicInteger noOfFetchedJobs;
+	private AtomicInteger noOfFaildJobs;
 	
 	private final String pluginsDeploymentDir;
 	private final String pluginsTempDir;
@@ -48,7 +50,7 @@ public class WorkerCore {
 	
 	private RabbitMQJobReceiver jobReceiver;
 	private BlockingQueue<Runnable> jobQueue;
-	private ThreadPoolExecutor executorPool;
+	private ObservableThreadPoolExecutor executorPool;
 	
 	// Constructor ------------------------------------------------------------
 	
@@ -59,9 +61,10 @@ public class WorkerCore {
 		this.plugins = new PluginImpl(pluginsDeploymentDir, pluginsTempDir, pluginsExportedPackages);
 		
 		this.maxWorkerThreads = Integer.parseInt(Configuration.getProperty("backmeup.worker.maxParallelJobs"));
-		this.currentWorkerThreads = 0;
 		
+		this.noOfRunningJobs = new AtomicInteger(0);
 		this.noOfFetchedJobs = new AtomicInteger(0);
+		this.noOfFaildJobs = new AtomicInteger(0);
 		
 		this.mqHost = Configuration.getProperty("backmeup.message.queue.host");
 		this.mqName = Configuration.getProperty("backmeup.message.queue.name");
@@ -77,7 +80,7 @@ public class WorkerCore {
 		this.jobReceiver = new RabbitMQJobReceiver(mqHost, mqName, mqWaitInterval);
 		this.jobQueue = new ArrayBlockingQueue<Runnable>(maxWorkerThreads); // 2
 		ThreadFactory threadFactory = Executors.defaultThreadFactory();
-		this.executorPool = new ThreadPoolExecutor(maxWorkerThreads, maxWorkerThreads, 10, TimeUnit.SECONDS, jobQueue, threadFactory);
+		this.executorPool = new ObservableThreadPoolExecutor(maxWorkerThreads, maxWorkerThreads, 10, TimeUnit.SECONDS, jobQueue, threadFactory);
 		
 		this.initialized = false;
 		setCurrentState(WorkerState.Offline);
@@ -94,7 +97,7 @@ public class WorkerCore {
 	}
 	
 	public int getNoOfCurrentJobs() {
-		throw new UnsupportedOperationException();
+		return this.executorPool.getActiveCount();
 	}
 	
 	public int getNoOfMaximumJobs() {
@@ -102,7 +105,7 @@ public class WorkerCore {
 	}
 
 	public int getNoOfFinishedJobs() {
-		throw new UnsupportedOperationException();
+		return (int) this.executorPool.getCompletedTaskCount();
 	}
 	
 	public int getNoOfFetchedJobs() {
@@ -119,15 +122,30 @@ public class WorkerCore {
 		logger.info("Initializing backmeup-worker");
 		boolean errorsDuringInit = false;
 		
+		executorPool.addThreadPoolListener(new ThreadPoolListener() {
+			@Override
+			public void terminated() {				
+			}
+			
+			@Override
+			public void beforeExecute(Thread t, Runnable r) {
+				jobThreadBeforeExecute(t, r);
+			}
+			
+			@Override
+			public void afterExecute(Runnable r, Throwable t) {
+				jobThreadAterExecute(r, t);
+			}
+		});
+		
 		plugins.startup();
+		
 		jobReceiver.initialize();
 		jobReceiver.addJobReceivedListener(new JobReceivedListener() {
-
 			@Override
 			public void jobReceived(JobReceivedEvent jre) {
 				executeBackupJob(jre);
 			}
-			
 		});
 		
 		if(!errorsDuringInit) {
@@ -164,6 +182,19 @@ public class WorkerCore {
 		BackupJob backupJob = jre.getBackupJob();
 		Runnable backupJobWorker = new BackupJobWorkerThread(backupJob, plugins, indexHost, indexPort, jobTempDir, backupName);
 		executorPool.execute(backupJobWorker);
+	}
+	
+	private void jobThreadBeforeExecute(Thread t, Runnable r) {
+		this.noOfRunningJobs.getAndIncrement();
+	}
+	
+	private void jobThreadAterExecute(Runnable r, Throwable t) {
+		if(t != null) {
+			noOfFaildJobs.getAndIncrement();
+		}
+		
+		this.noOfRunningJobs.getAndDecrement();
+		jobReceiver.setPaused(false);
 	}
 	
 	// Nested classes and enums -----------------------------------------------
