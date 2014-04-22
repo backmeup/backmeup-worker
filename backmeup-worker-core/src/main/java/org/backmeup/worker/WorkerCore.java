@@ -7,17 +7,17 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.backmeup.job.impl.BackupJobWorkerThread;
-import org.backmeup.job.impl.JobReceivedEvent;
-import org.backmeup.job.impl.JobReceivedListener;
-import org.backmeup.job.impl.rabbitmq.RabbitMQJobReceiver;
 import org.backmeup.model.BackupJob;
 import org.backmeup.model.exceptions.BackMeUpException;
 import org.backmeup.plugin.Plugin;
-import org.backmeup.plugin.osgi.PluginImpl;
 import org.backmeup.worker.config.Configuration;
-import org.backmeup.worker.threadpool.ObservableThreadPoolExecutor;
-import org.backmeup.worker.threadpool.ThreadPoolListener;
+import org.backmeup.worker.job.BackupJobWorkerThread;
+import org.backmeup.worker.job.receiver.JobReceivedEvent;
+import org.backmeup.worker.job.receiver.JobReceivedListener;
+import org.backmeup.worker.job.receiver.RabbitMQJobReceiver;
+import org.backmeup.worker.job.threadpool.ObservableThreadPoolExecutor;
+import org.backmeup.worker.job.threadpool.ThreadPoolListener;
+import org.backmeup.worker.plugin.osgi.PluginImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

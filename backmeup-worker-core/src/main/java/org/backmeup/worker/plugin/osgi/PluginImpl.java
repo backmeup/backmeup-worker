@@ -1,4 +1,4 @@
-package org.backmeup.plugin.osgi;
+package org.backmeup.worker.plugin.osgi;
 
 import java.io.File;
 import java.lang.reflect.InvocationHandler;

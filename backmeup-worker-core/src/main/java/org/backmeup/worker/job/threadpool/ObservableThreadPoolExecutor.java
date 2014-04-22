@@ -1,4 +1,4 @@
-package org.backmeup.worker.threadpool;
+package org.backmeup.worker.job.threadpool;
 
 import java.util.Vector;
 import java.util.concurrent.BlockingQueue;

@@ -1,4 +1,4 @@
-package org.backmeup.job.impl;
+package org.backmeup.worker.job.receiver;
 
 import java.util.EventListener;
 

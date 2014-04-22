@@ -1,4 +1,4 @@
-package org.backmeup.job.impl.rabbitmq;
+package org.backmeup.worker.job.receiver;
 
 import java.io.IOException;
 import java.util.Vector;
@@ -6,9 +6,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.backmeup.job.impl.JobReceivedEvent;
-import org.backmeup.job.impl.JobReceivedListener;
-import org.backmeup.job.impl.JobReceiver;
 import org.backmeup.model.BackupJob;
 import org.backmeup.model.exceptions.BackMeUpException;
 import org.backmeup.model.serializer.JsonSerializer;

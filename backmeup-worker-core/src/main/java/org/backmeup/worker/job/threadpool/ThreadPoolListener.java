@@ -1,4 +1,4 @@
-package org.backmeup.worker.threadpool;
+package org.backmeup.worker.job.threadpool;
 
 public interface ThreadPoolListener {
 	void beforeExecute(Thread t, Runnable r);

@@ -1,4 +1,4 @@
-package org.backmeup.job.impl;
+package org.backmeup.worker.job;
 
 import org.backmeup.keyserver.client.KeyserverFacade;
 import org.backmeup.keyserver.client.impl.KeyserverClient;
