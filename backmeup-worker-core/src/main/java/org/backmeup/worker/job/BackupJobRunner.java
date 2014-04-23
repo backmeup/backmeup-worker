@@ -294,6 +294,7 @@ public class BackupJobRunner {
 					sink.upload(sinkProperties, storage, new JobStatusProgressor(persistentJob, "datasink"));
 					addStatusToDb(new Status(persistentJob, "", StatusType.SUCCESSFUL, StatusCategory.INFO, new Date()));
 				} catch (StorageException e) {
+					logger.error("", e);
 					errorStatus.add(addStatusToDb(new Status(persistentJob, e.getMessage(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date())));
 				}
 

@@ -354,9 +354,8 @@ public class PluginImpl implements Plugin {
 			Object instance = context.getService(ref);
 			if (instance == null) {
 				logger.error(
-						"FATAL ERROR:\n\tCalling the method \"{}\" of a null-instance \"{}\" from bundle \"{}\"; getService returned null!\n",
-						method.getName(), instance, ref.getBundle()
-						.getSymbolicName());
+						"FATAL ERROR:\n\tCalling the method \"{}\" of a null-instance from bundle \"{}\"; getService returned null!\n",
+						method.getName(), ref.getBundle().getSymbolicName());
 			}
 			try {
 				boolean acc = method.isAccessible();

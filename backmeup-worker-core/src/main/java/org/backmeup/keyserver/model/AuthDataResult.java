@@ -1,5 +1,6 @@
 package org.backmeup.keyserver.model;
 
+import java.util.Arrays;
 import java.util.Properties;
 
 import org.backmeup.model.Token;
@@ -35,11 +36,15 @@ public class AuthDataResult {
   private UserData user;
   private AuthData[] authinfos;
 
-  public AuthDataResult(UserData user,
-      AuthData[] authinfos) {
+  public AuthDataResult(UserData user, AuthData[] authinfos) {
     super();
     this.user = user;
-    this.authinfos = authinfos;
+    
+    if(authinfos == null) { 
+    	this.authinfos = new AuthData[0]; 
+    } else { 
+    	this.authinfos = Arrays.copyOf(authinfos, authinfos.length); 
+    } 
   }
 
   public AuthDataResult() {
@@ -60,7 +65,11 @@ public class AuthDataResult {
   }
 
   public void setAuthinfos(AuthData[] authinfos) {
-    this.authinfos = authinfos;
+	  if(authinfos == null) { 
+		  this.authinfos = new AuthData[0]; 
+	  } else { 
+		  this.authinfos = Arrays.copyOf(authinfos, authinfos.length); 
+	  }
   }
 
   
