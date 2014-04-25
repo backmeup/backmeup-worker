@@ -8,6 +8,7 @@ import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpDelete;
@@ -39,6 +40,13 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 	private String port;
 
 	private String basePath;
+	
+	public BackmeupServiceClient(String scheme, String host, String port, String basePath) {
+		this.scheme = scheme;
+		this.host = host;
+		this.port = port;
+		this.basePath = basePath;
+	}
 	
 	private DefaultHttpClient createClient() {
 			return new DefaultHttpClient();
@@ -132,10 +140,11 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 	public BackupJob findBackupJobById(String username, Long jobId) {
 		Gson g = new Gson();
 		Result r = execute("/jobs/" + username + "/" + jobId, ReqType.GET, null);
-		if (r.response.getStatusLine().getStatusCode() == 200) {
-			return g.fromJson(r.content, BackupJob.class);
+		if (r.response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+			throw new BackMeUpException("Failed to retrieve BackupJob: " + r.content);
 		}
-		throw new BackMeUpException("Failed to retrieve BackupJob: " + r.content);
+		logger.debug("findBackupJobById: " + r.content);
+		return g.fromJson(r.content, BackupJob.class);
 	}
 
 	@Override

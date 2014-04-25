@@ -14,11 +14,12 @@ public class BackupJobWorkerThread implements Runnable {
 	private final Logger logger = LoggerFactory.getLogger(BackupJobWorkerThread.class);
 	
 	private BackupJob backupJob;
+	private String backupName;
 	
 	private String indexHost;
 	private int indexPort;
 	private String jobTempDir;
-	private String backupName;
+	
 	
 	private Plugin plugins;
 	private KeyserverFacade keyserverClient;
@@ -27,14 +28,14 @@ public class BackupJobWorkerThread implements Runnable {
 	public BackupJobWorkerThread(BackupJob backupJob, Plugin plugins, String indexHost, int indexPort, String jobTempDir, String backupName) {
 		super();
 		this.backupJob = backupJob;
+		this.backupName = backupName;
+		this.jobTempDir = jobTempDir;
 		this.plugins = plugins;
 		this.indexHost = indexHost;
 		this.indexPort = indexPort;
-		this.jobTempDir = jobTempDir;
-		this.backupName = backupName;
 		
-		this.keyserverClient = new KeyserverClient(); // TODO
-		this.bmuServiceClient = new BackmeupServiceClient(); // TODO
+		this.keyserverClient = new KeyserverClient("http", "localhost:8080", "/backmeup-keyserver"); // TODO
+		this.bmuServiceClient = new BackmeupServiceClient("http", "localhost", "8080", "/backmeup-service-rest/backmeup"); // TODO
 	}
 
 	@Override
@@ -48,7 +49,5 @@ public class BackupJobWorkerThread implements Runnable {
 		} catch (Exception e) {
 			logger.error("Failed to process job", e);
 		}
-		
 	}
-
 }
