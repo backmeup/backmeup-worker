@@ -36,14 +36,14 @@ public class AuthDataResult {
   private UserData user;
   private AuthData[] authinfos;
 
-  public AuthDataResult(UserData user, AuthData[] authinfos) {
+  public AuthDataResult(UserData user, AuthData[] authInformation) {
     super();
     this.user = user;
     
-    if(authinfos == null) { 
+    if(authInformation == null) { 
     	this.authinfos = new AuthData[0]; 
     } else { 
-    	this.authinfos = Arrays.copyOf(authinfos, authinfos.length); 
+    	this.authinfos = Arrays.copyOf(authInformation, authInformation.length); 
     } 
   }
 
@@ -64,11 +64,11 @@ public class AuthDataResult {
     return authinfos;
   }
 
-  public void setAuthinfos(AuthData[] authinfos) {
-	  if(authinfos == null) { 
+  public void setAuthinfos(AuthData[] authInformation) {
+	  if(authInformation == null) { 
 		  this.authinfos = new AuthData[0]; 
 	  } else { 
-		  this.authinfos = Arrays.copyOf(authinfos, authinfos.length); 
+		  this.authinfos = Arrays.copyOf(authInformation, authInformation.length); 
 	  }
   }
 
