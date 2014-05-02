@@ -43,10 +43,7 @@ public class BackupJobWorkerThread implements Runnable {
 	public void run() {
 		try {
 			BackupJobRunner runner = new BackupJobRunner(plugins, keyserverClient, bmuServiceClient, indexHost, indexPort, jobTempDir, backupName);
-			// TODO: create new instance of LocalFilesystemStorage from osgi container (plugins)
-			// Storage storage = new LocalFilesystemStorage();
-			// Storage storage = plugins.getStorage("org.backmeup.localfsstorage");
-			Storage storage = ((PluginImpl)plugins).service(Storage.class, "(name=" + "org.backmeup.localfsstorage" + ")");
+			Storage storage = ((PluginImpl)plugins).service(Storage.class, "(name=" + "org.backmeup.localfilesystemstorage" + ")");
 			runner.executeBackup(backupJob, storage);
 		} catch (Exception e) {
 			logger.error("Failed to process job", e);

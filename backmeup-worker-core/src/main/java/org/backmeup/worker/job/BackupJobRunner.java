@@ -142,8 +142,7 @@ public class BackupJobRunner {
 				String tmpDir = generateTmpDirName(persistentJob, sourceProfile);
 				storage.open(tmpDir);
 
-//				Datasource source = plugins.getDatasource(po.getProfile().getDescription());
-				Datasource source = plugins.getDatasource(sourceProfile.getIdentification());
+				Datasource source = plugins.getDatasource(sourceProfile.getDescription());
 
 //				Properties sourceProperties = authenticationData.getByProfileId(po.getProfile().getProfileId());
 				Properties sourceProperties = authenticationData.getByProfileId(sourceProfile.getDatasourceId());
