@@ -195,6 +195,7 @@ public class KeyserverClient implements KeyserverFacade {
 		String json = g.toJson(token);
 		Result r = execute(path + "/tokens/data", ReqType.POST, json);
 		if (r.response.getStatusLine().getStatusCode() == 200) {
+			logger.debug("Received token data: " + r.content);
 			return g.fromJson(r.content, AuthDataResult.class);
 		}
 		throw new BackMeUpException("Failed to retrieve token data: " + r.content);
