@@ -7,6 +7,7 @@ import org.backmeup.plugin.Plugin;
 import org.backmeup.plugin.api.storage.Storage;
 import org.backmeup.service.client.BackmeupServiceFacade;
 import org.backmeup.service.client.impl.BackmeupServiceClient;
+import org.backmeup.worker.plugin.osgi.PluginImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +45,8 @@ public class BackupJobWorkerThread implements Runnable {
 			BackupJobRunner runner = new BackupJobRunner(plugins, keyserverClient, bmuServiceClient, indexHost, indexPort, jobTempDir, backupName);
 			// TODO: create new instance of LocalFilesystemStorage from osgi container (plugins)
 			// Storage storage = new LocalFilesystemStorage();
-			Storage storage = null;
+			// Storage storage = plugins.getStorage("org.backmeup.localfsstorage");
+			Storage storage = ((PluginImpl)plugins).service(Storage.class, "(name=" + "org.backmeup.localfsstorage" + ")");
 			runner.executeBackup(backupJob, storage);
 		} catch (Exception e) {
 			logger.error("Failed to process job", e);
