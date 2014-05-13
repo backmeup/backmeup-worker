@@ -5,6 +5,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
@@ -47,6 +48,7 @@ import org.backmeup.plugin.api.connectors.Progressable;
 import org.backmeup.plugin.api.storage.Storage;
 import org.backmeup.plugin.api.storage.StorageException;
 import org.backmeup.service.client.BackmeupServiceFacade;
+import org.backmeup.worker.plugin.osgi.PluginImpl;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.ImmutableSettings;
@@ -120,9 +122,7 @@ public class BackupJobRunner {
 
 		// Protocol Overview requires information about executed jobs
 		JobProtocolDTO protocol = new JobProtocolDTO();
-//		Set<JobProtocolMemberDTO> protocolEntries = new HashSet<JobProtocolMemberDTO>();
-//		protocol.addMembers(protocolEntries);
-		protocol.setSinkTitle(persistentJob.getDatasink().getProfileName());
+		protocol.setSinkTitle(persistentJob.getDatasink().getDescription());
 		protocol.setExecutionTime(new Date().getTime());
 
 		// track the error status messages
@@ -170,8 +170,7 @@ public class BackupJobRunner {
 				protocol.addMember(new JobProtocolMemberDTO(protocol.getId(), "po.getProfile().getProfileName()", currentSize));
 				previousSize = storage.getDataObjectSize();
 
-				// make properties global for the action loop. So the
-				// plugins can communicate (filesplitt + encryption)
+				// make properties global for the action loop. So the plugins can communicate (filesplitt + encryption)
 				Properties params = new Properties();
 				params.putAll(sinkProperties);
 				params.putAll(sourceProperties);
@@ -179,52 +178,55 @@ public class BackupJobRunner {
 				// Execute Actions in sequence
 				addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.PROCESSING, StatusCategory.INFO, new Date().getTime()));
 
-				// add all properties which have been stored to the params
-				// collection
+				// add all properties which have been stored to the params collection
 				for (ActionProfileDTO actionProfile : persistentJob.getActions()) {
 					params.putAll(actionProfile.getOptions());
 				}
 
-				/*
 				
-				// Run indexing in case the user has enabled it using the
-				// 'enable.indexing' user property
-				boolean doIndexing = true; // We're using true as the
-											// default value for now
+				
+				// Run indexing in case the user has enabled it using the 'enable.indexing' user property
+				// We're using true as the default value for now
+				boolean doIndexing = false; 
 
-				String enableIndexing = persistentJob.getUser().getUserProperty("enable.indexing");
+				String enableIndexing = null;
+				// Move the indexing property to datasource profile?
+				//enableIndexing = persistentJob.getUser().getUserProperty("enable.indexing");
 				if (enableIndexing != null) {
 					if (enableIndexing.toLowerCase().trim().equals("false")) {
 						doIndexing = false;
 					}
 				}
-
+				
 				// has the indexer been requested during creation of the
 				// backup job?
-				ActionDescribable ad = new IndexDescribable();
-				List<ActionProfile> aps = persistentJob.getRequiredActions();
-				ActionProfile indexer = null;
-				for (ActionProfile ap : aps) {
+				ActionDescribable ad = plugins.getActionById("org.backmeup.indexer");
+				List<ActionProfileDTO> aps = persistentJob.getActions();
+				ActionProfileDTO indexer = null;
+				for (ActionProfileDTO ap : aps) {
 					if ("org.backmeup.indexer".equals(ap.getActionId())) {
 						indexer = ap;
 						break;
 					}
 				}
-
+				
 				if (doIndexing && indexer == null) {
 					// if we need to index, add the indexer to the requested actions
-					aps.add(new ActionProfile(ad.getId(), ad.getPriority()));
+					aps.add(new ActionProfileDTO(ad.getId(), ad.getPriority(), new HashMap<String, String>()));
 				}
-
-				for (ActionProfile actionProfile : persistentJob.getSortedRequiredActions()) {
+				
+				// TODO: Added getSortedActions in ActionProfileDTO
+//				for (ActionProfile actionProfile : persistentJob.getSortedRequiredActions()) {
+				for (ActionProfileDTO actionProfile : persistentJob.getActions()) {
 					String actionId = actionProfile.getActionId();
+					Action action;
 					Client client = null;
 					
 					try {
 						if ("org.backmeup.filesplitting".equals(actionId)) {
 							// If we do encryption, the Filesplitter needs to run before!
-							Action filesplitAction = new FilesplittAction();
-							filesplitAction.doAction(params, storage, persistentJob, new JobStatusProgressor(persistentJob, "filesplittaction"));
+							action = ((PluginImpl)plugins).getAction(actionId);
+//							action.doAction(params, storage, persistentJob, new JobStatusProgressor(persistentJob, "filesplittaction"));
 						} else if ("org.backmeup.encryption".equals(actionId)) {
 							// Add the encryption password to the parameters
 							if (authenticationData.getEncryptionPwd() != null) {
@@ -232,8 +234,8 @@ public class BackupJobRunner {
 							}
 
 							// After splitting, run encryption
-							Action encryptionAction = new EncryptionAction();
-							encryptionAction.doAction(params, storage, job,	new JobStatusProgressor(persistentJob, "encryptionaction"));
+							action = ((PluginImpl)plugins).getAction(actionId);
+//							action.doAction(params, storage, persistentJob,	new JobStatusProgressor(persistentJob, "encryptionaction"));
 						} else if ("org.backmeup.indexer".equals(actionId)) {
 							// Do nothing - we ignore index action declaration in the job description and use
 							// the info from the user properties instead
@@ -242,23 +244,20 @@ public class BackupJobRunner {
 							}
 
 						} else {
-							// Only happens in case Job was corrupted in the
-							// core - we'll handle that as a fatal error
-							errorStatus.add(addStatusToDb(new Status(persistentJob, "Unsupported Action: " + actionId, StatusType.JOB_FAILED, StatusCategory.ERROR, new Date())));
+							// Only happens in case Job was corrupted in the core - we'll handle that as a fatal error
+							errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), "Unsupported Action: " + actionId)));
 						}
 					} catch (ActionException e) {
 						// Should only happen in case of problems in the
 						// core (file I/O, DB access, etc.) - we'll handle
 						// that as a fatal error
-						errorStatus.add(addStatusToDb(new Status(persistentJob, e.getMessage(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date())));
+						errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
 					} finally {
 						if (client != null) {
 							client.close(); 
 						}
 					}
 				}
-				
-				*/
 
 				try {
 					// Upload to Sink
@@ -267,6 +266,7 @@ public class BackupJobRunner {
 					sinkProperties.setProperty("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
 					sinkProperties.setProperty("org.backmeup.userid", persistentJob.getUser().getUserId() + "");
 					sink.upload(sinkProperties, storage, new JobStatusProgressor(persistentJob, "datasink"));
+					
 					addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.SUCCESSFUL, StatusCategory.INFO, new Date().getTime()));
 				} catch (StorageException e) {
 					logger.error("", e);
@@ -276,7 +276,10 @@ public class BackupJobRunner {
 				// store job protocol within database
 				storeJobProtocol(persistentJob, protocol, storage.getDataObjectCount(), true);
 
-				storage.close();
+				// Closing the storage means to remove all files in the temporary directory.
+				// Including the root directory and the parent (/..../jobId/BMU_xxxxx)!
+				// For debugging reasons, storage is not closed:
+				//storage.close();
 			}
 		} catch (StorageException e) {
 			logger.error("", e);
@@ -298,22 +301,19 @@ public class BackupJobRunner {
 		}
 	}
 
-	/*
-	private void doIndexing(Properties params, Storage storage, BackupJob job,
-			Client client) throws ActionException {
+	private void doIndexing(Properties params, Storage storage, Job job, Client client) throws ActionException {
 		// If we do indexing, the Thumbnail renderer needs to run before!
-		Action thumbnailAction = new ThumbnailAction();
-		thumbnailAction.doAction(params, storage, job, new JobStatusProgressor(job, "thumbnailAction"));
+		Action thumbnailAction = ((PluginImpl)plugins).getAction("org.backmeup.thumbnail");
+//		thumbnailAction.doAction(params, storage, job, new JobStatusProgressor(job, "thumbnailAction"));
 
 		// After thumbnail rendering, run indexing
-		Settings settings = ImmutableSettings.settingsBuilder().put("cluster.name", ES_CLUSTER_NAME).build();
+		Settings settings = ImmutableSettings.settingsBuilder().put("cluster.name", indexName).build();
 		client = new TransportClient(settings).addTransportAddress(new InetSocketTransportAddress(indexHost, indexPort));
 
-		Action indexAction = new IndexAction(client);
-		indexAction.doAction(params, storage, job, new JobStatusProgressor(job,	"indexaction"));
+		Action indexAction = ((PluginImpl)plugins).getAction("org.backmeup.indexing");
+//		indexAction.doAction(params, storage, job, new JobStatusProgressor(job,	"indexaction"));
 		client.close();
 	}
-	*/
 	
 	private JobStatus addStatusToDb(JobStatus status) {
 		logger.debug("Job status: {}", status.getMessage());
