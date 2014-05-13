@@ -18,6 +18,7 @@ import org.backmeup.model.spi.SourceSinkDescribable;
 import org.backmeup.model.spi.SourceSinkDescribable.Type;
 import org.backmeup.model.spi.Validationable;
 import org.backmeup.plugin.Plugin;
+import org.backmeup.plugin.api.actions.Action;
 import org.backmeup.plugin.api.connectors.Datasink;
 import org.backmeup.plugin.api.connectors.Datasource;
 import org.backmeup.plugin.spi.Authorizable;
@@ -154,6 +155,10 @@ public class PluginImpl implements Plugin {
 			actionList.add(ad);
 		}
 		return actionList;
+	}
+	
+	public Action getAction(String actionId) {
+		return service(Action.class, "(name=" + actionId + ")");
 	}
 
 	public ActionDescribable getActionById(String actionId) {
