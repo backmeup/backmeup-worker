@@ -198,9 +198,7 @@ public class BackupJobRunner {
 					}
 				}
 				
-				// has the indexer been requested during creation of the
-				// backup job?
-				ActionDescribable ad = plugins.getActionById("org.backmeup.indexer");
+				// has the indexer been requested during creation of the backup job?
 				List<ActionProfileDTO> aps = persistentJob.getActions();
 				ActionProfileDTO indexer = null;
 				for (ActionProfileDTO ap : aps) {
@@ -212,6 +210,7 @@ public class BackupJobRunner {
 				
 				if (doIndexing && indexer == null) {
 					// if we need to index, add the indexer to the requested actions
+					ActionDescribable ad = plugins.getActionById("org.backmeup.indexer");
 					aps.add(new ActionProfileDTO(ad.getId(), ad.getPriority(), new HashMap<String, String>()));
 				}
 				
@@ -248,9 +247,8 @@ public class BackupJobRunner {
 							errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), "Unsupported Action: " + actionId)));
 						}
 					} catch (ActionException e) {
-						// Should only happen in case of problems in the
-						// core (file I/O, DB access, etc.) - we'll handle
-						// that as a fatal error
+						// Should only happen in case of problems in the backmeup-service (file I/O, DB access, etc.)
+						// We'll handle that as a fatal error
 						errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
 					} finally {
 						if (client != null) {

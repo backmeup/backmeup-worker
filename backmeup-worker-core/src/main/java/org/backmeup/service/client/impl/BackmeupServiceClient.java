@@ -18,8 +18,6 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.message.BasicHeader;
-import org.apache.http.protocol.HTTP;
 import org.backmeup.model.Status;
 import org.backmeup.model.dto.Job;
 import org.backmeup.model.dto.JobProtocolDTO;
