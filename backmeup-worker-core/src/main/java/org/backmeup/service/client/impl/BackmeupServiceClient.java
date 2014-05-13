@@ -84,14 +84,15 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 				request = new HttpGet(registerUri);
 				break;
 			default:
-				HttpPost post;
-				request = post = new HttpPost(registerUri);
+				HttpPost post = new HttpPost(registerUri);
 				if (jsonParams != null) {
-					StringEntity entity = new StringEntity(jsonParams, "UTF-8");
-					BasicHeader header = new BasicHeader(HTTP.CONTENT_TYPE, "application/json");
-					entity.setContentType(header);
+					StringEntity entity = new StringEntity(jsonParams, "UTF-8");					
 					post.setEntity(entity);
+					
+					post.setHeader("Accept", "application/json");
+					post.setHeader("Content-type", "application/json");
 				}
+				request = post;
 				break;
 			}
 			
@@ -164,8 +165,8 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 	public void saveJobProtocol(String username, Long jobId, JobProtocolDTO protocol) {
 		Gson g = new Gson();
 		String json = g.toJson(protocol);
-		Result r = execute("/jobs/" + username + "/" + jobId + "/protocol", ReqType.PUT, json);
-		if (r.response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+		Result r = execute("/jobs/" + username + "/" + jobId + "/protocol", ReqType.POST, json);
+		if (r.response.getStatusLine().getStatusCode() != HttpStatus.SC_NO_CONTENT) {
 			throw new BackMeUpException("Failed to save job protocols: " + r.content);
 		}
 		logger.debug("saveBackupJob: " + r.content);
@@ -174,7 +175,7 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 	@Override
 	public void deleteJobProtocolByUsername(String username) {
 		Result r = execute("/jobs/" + username + "/protocol", ReqType.DELETE, null);
-		if (r.response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
+		if (r.response.getStatusLine().getStatusCode() != HttpStatus.SC_NO_CONTENT) {
 			throw new BackMeUpException("Failed to delete job protocols: " + r.content);
 		}
 	}
