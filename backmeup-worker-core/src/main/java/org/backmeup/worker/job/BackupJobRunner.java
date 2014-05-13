@@ -120,8 +120,8 @@ public class BackupJobRunner {
 
 		// Protocol Overview requires information about executed jobs
 		JobProtocolDTO protocol = new JobProtocolDTO();
-		Set<JobProtocolMemberDTO> protocolEntries = new HashSet<JobProtocolMemberDTO>();
-		protocol.addMembers(protocolEntries);
+//		Set<JobProtocolMemberDTO> protocolEntries = new HashSet<JobProtocolMemberDTO>();
+//		protocol.addMembers(protocolEntries);
 		protocol.setSinkTitle(persistentJob.getDatasink().getProfileName());
 		protocol.setExecutionTime(new Date().getTime());
 
@@ -167,7 +167,7 @@ public class BackupJobRunner {
 
 				// for each datasource add an entry with bytes it consumed
 				long currentSize = storage.getDataObjectSize() - previousSize;
-				protocolEntries.add(new JobProtocolMemberDTO(protocol.getId(), "po.getProfile().getProfileName()", currentSize));
+				protocol.addMember(new JobProtocolMemberDTO(protocol.getId(), "po.getProfile().getProfileName()", currentSize));
 				previousSize = storage.getDataObjectSize();
 
 				// make properties global for the action loop. So the
@@ -326,8 +326,6 @@ public class BackupJobRunner {
 	}
 
 	private void storeJobProtocol(Job job, JobProtocolDTO protocol, int storedEntriesCount, boolean success) {
-//		job = bmuService.findBackupJobById(job.getUser().getUsername(), job.getId());
-
 		// remove old entries, then store the new one
 		bmuService.deleteJobProtocolByUsername(job.getUser().getUsername());
 
