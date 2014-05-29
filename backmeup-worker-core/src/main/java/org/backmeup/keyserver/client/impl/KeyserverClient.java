@@ -48,11 +48,11 @@ public class KeyserverClient implements KeyserverFacade {
 		GET, DELETE, PUT, POST
 	}
 
-	private String scheme;
+	private final String scheme;
 
-	private String host;
+	private final String host;
 
-	private String path;
+	private final String path;
 
 	private String keystore;
 

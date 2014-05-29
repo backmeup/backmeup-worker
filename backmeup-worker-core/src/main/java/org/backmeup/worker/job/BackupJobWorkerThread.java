@@ -14,17 +14,17 @@ import org.slf4j.LoggerFactory;
 public class BackupJobWorkerThread implements Runnable {
 	private final Logger logger = LoggerFactory.getLogger(BackupJobWorkerThread.class);
 	
-	private BackupJob backupJob;
-	private String backupName;
+	private final BackupJob backupJob;
+	private final String backupName;
 	
-	private String indexHost;
-	private int indexPort;
-	private String jobTempDir;
+	private final String indexHost;
+	private final int indexPort;
+	private final String jobTempDir;
 	
 	
-	private Plugin plugins;
-	private KeyserverFacade keyserverClient;
-	private BackmeupServiceFacade bmuServiceClient;
+	private final Plugin plugins;
+	private final KeyserverFacade keyserverClient;
+	private final BackmeupServiceFacade bmuServiceClient;
 
 	public BackupJobWorkerThread(BackupJob backupJob, Plugin plugins, String indexHost, int indexPort, String jobTempDir, String backupName) {
 		super();

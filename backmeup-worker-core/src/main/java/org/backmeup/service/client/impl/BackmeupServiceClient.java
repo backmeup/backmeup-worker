@@ -32,13 +32,13 @@ import com.google.gson.Gson;
 public class BackmeupServiceClient implements BackmeupServiceFacade {
 	private final Logger logger = LoggerFactory.getLogger(BackmeupServiceClient.class);
 	
-	private String scheme;
+	private final String scheme;
 	
-	private String host;
+	private final String host;
 	
-	private String port;
+	private final String port;
 
-	private String basePath;
+	private final String basePath;
 	
 	public BackmeupServiceClient(String scheme, String host, String port, String basePath) {
 		this.scheme = scheme;

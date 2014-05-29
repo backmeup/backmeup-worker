@@ -3,23 +3,14 @@ package org.backmeup.worker.job;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.ResourceBundle;
-import java.util.Set;
-
 import org.backmeup.keyserver.client.KeyserverFacade;
 import org.backmeup.keyserver.model.AuthDataResult;
-import org.backmeup.model.ActionProfile;
-import org.backmeup.model.ActionProfile.ActionProperty;
 import org.backmeup.model.BackupJob;
-import org.backmeup.model.JobProtocol;
-import org.backmeup.model.JobProtocol.JobProtocolMember;
-import org.backmeup.model.ProfileOptions;
 import org.backmeup.model.StatusCategory;
 import org.backmeup.model.StatusType;
 import org.backmeup.model.Token;
@@ -68,18 +59,18 @@ public class BackupJobRunner {
 	private static final String ERROR_EMAIL_SUBJECT = "ERROR_EMAIL_SUBJECT";
 	private static final String ERROR_EMAIL_MIMETYPE = "ERROR_EMAIL_MIMETYPE";
 
-	private String indexHost;
-	private int    indexPort;
-	private String indexName = "es-backmeup-cluster";
+	private final String indexHost;
+	private final int    indexPort;
+	private final String indexName = "es-backmeup-cluster";
 
-	private String jobTempDir;
-	private String backupName;
+	private final String jobTempDir;
+	private final String backupName;
 
-	private Plugin plugins;
-	private KeyserverFacade keyserver;
-	private BackmeupServiceFacade bmuService;
+	private final Plugin plugins;
+	private final KeyserverFacade keyserver;
+	private final BackmeupServiceFacade bmuService;
 
-	private ResourceBundle textBundle = ResourceBundle.getBundle("BackupJobRunner");
+	private final ResourceBundle textBundle = ResourceBundle.getBundle("BackupJobRunner");
 
 	public BackupJobRunner(Plugin plugins, KeyserverFacade keyserver, BackmeupServiceFacade bmuService, String indexHost, int indexPort, String jobTempDir, String backupName) {
 		this.plugins = plugins;
@@ -369,8 +360,8 @@ public class BackupJobRunner {
 
 	private class JobStatusProgressor implements Progressable {
 
-		private Job job;
-		private String category;
+		private final Job job;
+		private final String category;
 
 		public JobStatusProgressor(Job job, String category) {
 			this.job = job;

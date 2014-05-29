@@ -32,16 +32,16 @@ public class RabbitMQJobReceiver implements JobReceiver{
 	
 	private boolean initialized;
 
-	private AtomicReference<Connection> mqConnection;
-	private AtomicReference<Channel> mqChannel;
-	private AtomicInteger mqTimeout;
+	private final AtomicReference<Connection> mqConnection;
+	private final AtomicReference<Channel> mqChannel;
+	private final AtomicInteger mqTimeout;
 
-	private AtomicReference<Thread> receiverThread;
-	private AtomicBoolean stopReceiver;
-	private AtomicBoolean pauseReceiver;
-	private AtomicInteger pauseInterval;
+	private final AtomicReference<Thread> receiverThread;
+	private final AtomicBoolean stopReceiver;
+	private final AtomicBoolean pauseReceiver;
+	private final AtomicInteger pauseInterval;
 	
-	private Vector<JobReceivedListener> listeners;
+	private final Vector<JobReceivedListener> listeners;
 
 	public RabbitMQJobReceiver(String mqHostAdr, String mqName, int waitInterval) {
 		this.mqName = mqName;
@@ -58,7 +58,7 @@ public class RabbitMQJobReceiver implements JobReceiver{
 		
 		this.initialized = false;
 		
-		this.listeners = new Vector<JobReceivedListener>();
+		this.listeners = new Vector<>();
 	}
 
 	
@@ -106,7 +106,8 @@ public class RabbitMQJobReceiver implements JobReceiver{
 		}
 
 		receiverThread.set(new Thread(new Runnable() {
-			public void run() {
+			@Override
+            public void run() {
 				logger.info("Starting message queue receiver");
 				
 				QueueingConsumer consumer = new QueueingConsumer(mqChannel.get());

@@ -27,10 +27,10 @@ public class WorkerCore {
 	private Boolean initialized;
 	private WorkerState currentState;
 	
-	private int maxWorkerThreads;
-	private AtomicInteger noOfRunningJobs;
-	private AtomicInteger noOfFetchedJobs;
-	private AtomicInteger noOfFaildJobs;
+	private final int maxWorkerThreads;
+	private final AtomicInteger noOfRunningJobs;
+	private final AtomicInteger noOfFetchedJobs;
+	private final AtomicInteger noOfFaildJobs;
 	
 	private final String pluginsDeploymentDir;
 	private final String pluginsTempDir;
@@ -48,9 +48,9 @@ public class WorkerCore {
 	private final String jobTempDir;
 	private final String backupName;
 	
-	private RabbitMQJobReceiver jobReceiver;
-	private BlockingQueue<Runnable> jobQueue;
-	private ObservableThreadPoolExecutor executorPool;
+	private final RabbitMQJobReceiver jobReceiver;
+	private final BlockingQueue<Runnable> jobQueue;
+	private final ObservableThreadPoolExecutor executorPool;
 	
 	// Constructor ------------------------------------------------------------
 	
@@ -78,7 +78,7 @@ public class WorkerCore {
 		this.backupName = Configuration.getProperty("backmeup.job.backupname");
 		
 		this.jobReceiver = new RabbitMQJobReceiver(mqHost, mqName, mqWaitInterval);
-		this.jobQueue = new ArrayBlockingQueue<Runnable>(maxWorkerThreads); // 2
+		this.jobQueue = new ArrayBlockingQueue<>(maxWorkerThreads); // 2
 		ThreadFactory threadFactory = Executors.defaultThreadFactory();
 		this.executorPool = new ObservableThreadPoolExecutor(maxWorkerThreads, maxWorkerThreads, 10, TimeUnit.SECONDS, jobQueue, threadFactory);
 		

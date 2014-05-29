@@ -7,7 +7,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 public class ObservableThreadPoolExecutor extends ThreadPoolExecutor {
-	private Vector<ThreadPoolListener> listeners = new Vector<ThreadPoolListener>();
+	private final Vector<ThreadPoolListener> listeners = new Vector<>();
 	
 	// Constructors -----------------------------------------------------------
 
