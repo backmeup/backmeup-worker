@@ -49,7 +49,7 @@ public class DeployMonitor implements Runnable {
 
   public void waitForInitialRun() {
     try {
-      if (!firstRun)
+      while (!firstRun)
         synchronized (monitor) {
           monitor.wait();
         }
