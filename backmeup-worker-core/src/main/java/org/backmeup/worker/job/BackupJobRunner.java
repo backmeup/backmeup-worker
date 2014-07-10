@@ -101,7 +101,7 @@ public class BackupJobRunner {
 		// Set the new token information in the current job
 		backupJob.getToken().setTokenId(newToken.getTokenId());
 		backupJob.getToken().setToken(newToken.getToken());
-//		persistentJob.getToken().setBackupDate(newToken.getBackupdate()); // TODO: add to TokenDTO
+		backupJob.getToken().setValidity(newToken.getBackupdate());
 		
 		backupJob.setJobStatus(JobStatus.running);
 
