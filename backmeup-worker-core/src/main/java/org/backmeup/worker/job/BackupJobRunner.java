@@ -8,19 +8,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 import java.util.ResourceBundle;
+
 import org.backmeup.keyserver.client.KeyserverFacade;
 import org.backmeup.keyserver.model.AuthDataResult;
-import org.backmeup.model.BackupJob;
 import org.backmeup.model.StatusCategory;
 import org.backmeup.model.StatusType;
 import org.backmeup.model.Token;
 import org.backmeup.model.constants.BackupJobStatus;
-import org.backmeup.model.dto.ActionProfileDTO;
-import org.backmeup.model.dto.DatasourceProfile;
-import org.backmeup.model.dto.Job;
+import org.backmeup.model.dto.BackupJobDTO;
+import org.backmeup.model.dto.BackupJobDTO.JobStatus;
 import org.backmeup.model.dto.JobProtocolDTO;
-import org.backmeup.model.dto.JobProtocolMemberDTO;
-import org.backmeup.model.dto.JobStatus;
+import org.backmeup.model.dto.PluginProfileDTO;
 import org.backmeup.model.spi.ActionDescribable;
 import org.backmeup.plugin.Plugin;
 import org.backmeup.plugin.api.actions.Action;
@@ -82,38 +80,39 @@ public class BackupJobRunner {
 		this.backupName = backupName;
 	}
 
-	public void executeBackup(BackupJob job, Storage storage) {
+	public void executeBackup(BackupJobDTO job, Storage storage) {
 
 		// use the job which is stored within the database
-		Job persistentJob = bmuService.findBackupJobById(job.getUser().getUsername(), job.getId());
+		BackupJobDTO persistentJob = bmuService.findBackupJobById(job.getUser().getUsername(), job.getJobId());
 		// when will the next access to the access data occur? current time + delay
-		persistentJob.setBackupDate(new Date().getTime() + persistentJob.getDelay());
+		Long backupDate = new Date().getTime() + persistentJob.getDelay();
+//		persistentJob.setBackupDate(new Date().getTime() + persistentJob.getDelay());
 
 		// get access data + new token for next access
 		Token token = new Token(
-				persistentJob.getToken(),
-				persistentJob.getTokenId(),
-				persistentJob.getBackupDate());
+				persistentJob.getToken().getToken(),
+				persistentJob.getToken().getTokenId(),
+				backupDate);
 		AuthDataResult authenticationData = keyserver.getData(token);
 
 		// the token for the next getData call
 		Token newToken = authenticationData.getNewToken();
 		
 		// Set the new token information in the current job
-		persistentJob.setTokenId(newToken.getTokenId());
-		persistentJob.setToken(newToken.getToken());
-		persistentJob.setBackupDate(newToken.getBackupdate());
+		persistentJob.getToken().setTokenId(newToken.getTokenId());
+		persistentJob.getToken().setToken(newToken.getToken());
+//		persistentJob.getToken().setBackupDate(newToken.getBackupdate()); // TODO: add to TokenDTO
 		
-		persistentJob.setStatus(BackupJobStatus.running);
+		persistentJob.setJobStatus(JobStatus.running);
 
 		// Store newToken for the next backup schedule
 		// Only store token?
 		// Set job status 'running'
-//		bmuService.saveBackupJob(persistentJob);
+		bmuService.updateBackupJob(persistentJob);
 
 		// Protocol Overview requires information about executed jobs
 		JobProtocolDTO protocol = new JobProtocolDTO();
-		protocol.setSinkTitle(persistentJob.getDatasink().getDescription());
+//		protocol.setSinkTitle(persistentJob.getSink().getTitle());
 		protocol.setExecutionTime(new Date().getTime());
 
 		// track the error status messages
@@ -121,145 +120,162 @@ public class BackupJobRunner {
 
 		// Open temporary storage
 		try {
-			Datasink sink = plugins.getDatasink(persistentJob.getDatasink().getDescription());
-			Properties sinkProperties = authenticationData.getByProfileId(persistentJob.getDatasink().getProfileId());
+			Datasink sink = plugins.getDatasink(persistentJob.getSink().getPluginId());
+			Properties sinkProperties = authenticationData.getByProfileId(persistentJob.getSink().getProfileId());
 
 			// delete previously stored status, as we only need the latest
-			deleteOldStatus(persistentJob);
-			addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.STARTED, StatusCategory.INFO, new Date().getTime()));
+//			deleteOldStatus(persistentJob);
+			
+//			addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.STARTED, StatusCategory.INFO, new Date().getTime()));
+			logger.info("Job " + persistentJob.getJobId() + " startet");
+			
 			long previousSize = 0;
 
-			for (DatasourceProfile sourceProfile : persistentJob.getDatasources()) {
-				String tmpDir = generateTmpDirName(persistentJob, sourceProfile);
-				storage.open(tmpDir);
+			PluginProfileDTO sourceProfile = persistentJob.getSource();
+			String tmpDir = generateTmpDirName(persistentJob, sourceProfile);
+			storage.open(tmpDir);
 
-				Datasource source = plugins.getDatasource(sourceProfile.getDescription());
+			Datasource source = plugins.getDatasource(sourceProfile.getPluginId());
 
-//				Properties sourceProperties = authenticationData.getByProfileId(po.getProfile().getProfileId());
-				Properties sourceProperties = authenticationData.getByProfileId(sourceProfile.getDatasourceId());
-				
-				List<String> sourceOptions = new ArrayList<String>();
-				if (sourceProfile.getDatasourceOptions() != null) {
-					sourceOptions.addAll(sourceProfile.getDatasourceOptions());
+			// Properties sourceProperties = authenticationData.getByProfileId(po.getProfile().getProfileId());
+			Properties sourceProperties = authenticationData.getByProfileId(sourceProfile.getProfileId());
+
+			List<String> sourceOptions = new ArrayList<String>();
+			if (sourceProfile.getOptions() != null) {
+				sourceOptions.addAll(sourceProfile.getOptions());
+			}
+
+//			addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOADING, StatusCategory.INFO, new Date().getTime()));
+			logger.info("Job " + persistentJob.getJobId() + " downloading");
+			
+			// Download from source
+			try {
+				source.downloadAll(sourceProperties, sourceOptions, storage, new JobStatusProgressor(persistentJob, "datasource"));
+			} catch (StorageException e) {
+//				logger.error("", e);
+//				errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOAD_FAILED, StatusCategory.WARNING, new Date().getTime(), e.getMessage())));
+				logger.warn("Job " + persistentJob.getJobId() + " faild with message: " + e);
+			} catch (DatasourceException e) {
+//				logger.error("", e);
+//				errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOAD_FAILED, StatusCategory.WARNING, new Date().getTime(), e.getMessage())));
+				logger.warn("Job " + persistentJob.getJobId() + " faild with message: " + e);
+			}
+
+			// for each datasource add an entry with bytes it consumed
+			long currentSize = storage.getDataObjectSize() - previousSize;
+//			protocol.addMember(new JobProtocolMemberDTO(protocol.getId(), "po.getProfile().getProfileName()", currentSize));
+			protocol.setSpace((int)currentSize);
+			previousSize = storage.getDataObjectSize();
+
+			// make properties global for the action loop. So the plugins can communicate (filesplitt + encryption)
+			Properties params = new Properties();
+			params.putAll(sinkProperties);
+			params.putAll(sourceProperties);
+
+			// Execute Actions in sequence
+//			addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.PROCESSING, StatusCategory.INFO, new Date().getTime()));
+			logger.info("Job " + persistentJob.getJobId() + " processing");
+
+			// add all properties which have been stored to the params collection
+			for (PluginProfileDTO actionProfile : persistentJob.getActions()) {
+//				params.putAll(actionProfile.);
+				Properties actionProperties = authenticationData.getByProfileId(actionProfile.getProfileId());
+				params.putAll(actionProperties);
+			}
+
+			
+			// Run indexing in case the user has enabled it using the 'enable.indexing' user property
+			// We're using true as the default value for now
+			boolean doIndexing = false; 
+
+			String enableIndexing = null;
+			// Move the indexing property to datasource profile?
+			//enableIndexing = persistentJob.getUser().getUserProperty("enable.indexing");
+			if (enableIndexing != null) {
+				if (enableIndexing.toLowerCase().trim().equals("false")) {
+					doIndexing = false;
 				}
+			}
 
-				addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOADING, StatusCategory.INFO, new Date().getTime()));
+			// has the indexer been requested during creation of the backup job?
+			List<PluginProfileDTO> actions = persistentJob.getActions();
+			PluginProfileDTO indexer = null;
+			for (PluginProfileDTO actionProfile : actions) {
+				if ("org.backmeup.indexer".equals(actionProfile.getPluginId())) {
+					indexer = actionProfile;
+					break;
+				}
+			}
 
-				// Download from source
+			if (doIndexing && indexer == null) {
+				// if we need to index, add the indexer to the requested actions
+				ActionDescribable ad = plugins.getActionById("org.backmeup.indexer");
+				PluginProfileDTO indexActionProfile = new PluginProfileDTO();
+				indexActionProfile.setPluginId(ad.getId());
+				indexActionProfile.setConfigProperties(new HashMap<String, String>());
+//				actions.add(new PluginProfileDTO(ad.getId(), ad.getPriority(), new HashMap<String, String>()));
+			}
+
+			// TODO: Added getSortedActions in ActionProfileDTO
+			//				for (ActionProfile actionProfile : persistentJob.getSortedRequiredActions()) {
+			for (PluginProfileDTO actionProfile : persistentJob.getActions()) {
+				String actionId = actionProfile.getPluginId();
+				Action action;
+				Client client = null;
+
 				try {
-					source.downloadAll(sourceProperties, sourceOptions, storage, new JobStatusProgressor(persistentJob, "datasource"));
-				} catch (StorageException e) {
-					logger.error("", e);
-					errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOAD_FAILED, StatusCategory.WARNING, new Date().getTime(), e.getMessage())));
-				} catch (DatasourceException e) {
-					logger.error("", e);
-					errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOAD_FAILED, StatusCategory.WARNING, new Date().getTime(), e.getMessage())));
-				}
-
-				// for each datasource add an entry with bytes it consumed
-				long currentSize = storage.getDataObjectSize() - previousSize;
-				protocol.addMember(new JobProtocolMemberDTO(protocol.getId(), "po.getProfile().getProfileName()", currentSize));
-				previousSize = storage.getDataObjectSize();
-
-				// make properties global for the action loop. So the plugins can communicate (filesplitt + encryption)
-				Properties params = new Properties();
-				params.putAll(sinkProperties);
-				params.putAll(sourceProperties);
-
-				// Execute Actions in sequence
-				addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.PROCESSING, StatusCategory.INFO, new Date().getTime()));
-
-				// add all properties which have been stored to the params collection
-				for (ActionProfileDTO actionProfile : persistentJob.getActions()) {
-					params.putAll(actionProfile.getOptions());
-				}
-
-				
-				
-				// Run indexing in case the user has enabled it using the 'enable.indexing' user property
-				// We're using true as the default value for now
-				boolean doIndexing = false; 
-
-				String enableIndexing = null;
-				// Move the indexing property to datasource profile?
-				//enableIndexing = persistentJob.getUser().getUserProperty("enable.indexing");
-				if (enableIndexing != null) {
-					if (enableIndexing.toLowerCase().trim().equals("false")) {
-						doIndexing = false;
-					}
-				}
-				
-				// has the indexer been requested during creation of the backup job?
-				List<ActionProfileDTO> aps = persistentJob.getActions();
-				ActionProfileDTO indexer = null;
-				for (ActionProfileDTO ap : aps) {
-					if ("org.backmeup.indexer".equals(ap.getActionId())) {
-						indexer = ap;
-						break;
-					}
-				}
-				
-				if (doIndexing && indexer == null) {
-					// if we need to index, add the indexer to the requested actions
-					ActionDescribable ad = plugins.getActionById("org.backmeup.indexer");
-					aps.add(new ActionProfileDTO(ad.getId(), ad.getPriority(), new HashMap<String, String>()));
-				}
-				
-				// TODO: Added getSortedActions in ActionProfileDTO
-//				for (ActionProfile actionProfile : persistentJob.getSortedRequiredActions()) {
-				for (ActionProfileDTO actionProfile : persistentJob.getActions()) {
-					String actionId = actionProfile.getActionId();
-					Action action;
-					Client client = null;
-					
-					try {
-						if ("org.backmeup.filesplitting".equals(actionId)) {
-							// If we do encryption, the Filesplitter needs to run before!
-							action = ((PluginImpl)plugins).getAction(actionId);
-//							action.doAction(params, storage, persistentJob, new JobStatusProgressor(persistentJob, "filesplittaction"));
-						} else if ("org.backmeup.encryption".equals(actionId)) {
-							// Add the encryption password to the parameters
-							if (authenticationData.getEncryptionPwd() != null) {
-								params.put("org.backmeup.encryption.password", authenticationData.getEncryptionPwd());
-							}
-
-							// After splitting, run encryption
-							action = ((PluginImpl)plugins).getAction(actionId);
-//							action.doAction(params, storage, persistentJob,	new JobStatusProgressor(persistentJob, "encryptionaction"));
-						} else if ("org.backmeup.indexer".equals(actionId)) {
-							// Do nothing - we ignore index action declaration in the job description and use
-							// the info from the user properties instead
-							if (doIndexing) {
-								doIndexing(params, storage, persistentJob, client);
-							}
-
-						} else {
-							// Only happens in case Job was corrupted in the core - we'll handle that as a fatal error
-							errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), "Unsupported Action: " + actionId)));
+					if ("org.backmeup.filesplitting".equals(actionId)) {
+						// If we do encryption, the Filesplitter needs to run before!
+						action = ((PluginImpl)plugins).getAction(actionId);
+						//							action.doAction(params, storage, persistentJob, new JobStatusProgressor(persistentJob, "filesplittaction"));
+					} else if ("org.backmeup.encryption".equals(actionId)) {
+						// Add the encryption password to the parameters
+						if (authenticationData.getEncryptionPwd() != null) {
+							params.put("org.backmeup.encryption.password", authenticationData.getEncryptionPwd());
 						}
-					} catch (ActionException e) {
-						// Should only happen in case of problems in the backmeup-service (file I/O, DB access, etc.)
-						// We'll handle that as a fatal error
-						errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
-					} finally {
-						if (client != null) {
-							client.close(); 
+
+						// After splitting, run encryption
+						action = ((PluginImpl)plugins).getAction(actionId);
+						//							action.doAction(params, storage, persistentJob,	new JobStatusProgressor(persistentJob, "encryptionaction"));
+					} else if ("org.backmeup.indexer".equals(actionId)) {
+						// Do nothing - we ignore index action declaration in the job description and use
+						// the info from the user properties instead
+						if (doIndexing) {
+							doIndexing(params, storage, persistentJob, client);
 						}
+
+					} else {
+						// Only happens in case Job was corrupted in the core - we'll handle that as a fatal error
+//						errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), "Unsupported Action: " + actionId)));
+						logger.error("Job " + persistentJob.getJobId() + " faild with unsupported action: " + actionId);
+					}
+				} catch (ActionException e) {
+					// Should only happen in case of problems in the backmeup-service (file I/O, DB access, etc.)
+					// We'll handle that as a fatal error
+//					errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
+					logger.error("Job " + persistentJob.getJobId() + " faild with message: " + e);
+				} finally {
+					if (client != null) {
+						client.close(); 
 					}
 				}
+
 
 				try {
 					// Upload to Sink
-					addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.UPLOADING, StatusCategory.INFO, new Date().getTime()));
+//					addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.UPLOADING, StatusCategory.INFO, new Date().getTime()));
+					logger.info("Job " + persistentJob.getJobId() + " uploading");
 
 					sinkProperties.setProperty("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
 					sinkProperties.setProperty("org.backmeup.userid", persistentJob.getUser().getUserId() + "");
 					sink.upload(sinkProperties, storage, new JobStatusProgressor(persistentJob, "datasink"));
 					
-					addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.SUCCESSFUL, StatusCategory.INFO, new Date().getTime()));
+//					addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.SUCCESSFUL, StatusCategory.INFO, new Date().getTime()));
+					logger.info("Job " + persistentJob.getJobId() + " successful");
 				} catch (StorageException e) {
-					logger.error("", e);
-					errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
+//					logger.error("", e);
+//					errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
+					logger.error("Job " + persistentJob.getJobId() + " faild with message: " + e);
 				}
 
 				// store job protocol within database
@@ -271,16 +287,20 @@ public class BackupJobRunner {
 				//storage.close();
 			}
 		} catch (StorageException e) {
-			logger.error("", e);
+//			logger.error("", e);
 			// job failed, store job protocol within database
 			storeJobProtocol(persistentJob, protocol, 0, false);
-			errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
+//			errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
+			logger.error("Job " + persistentJob.getJobId() + " faild with message: " + e);
 		} catch (Exception e) {
-			logger.error("", e);
+//			logger.error("", e);
 			storeJobProtocol(persistentJob, protocol, 0, false);
-			errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
+//			errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
+			logger.error("Job " + persistentJob.getJobId() + " faild with message: " + e);			
 		}
+		
 		// send error message, if there were any error status messages
+		/*
 		if (!errorStatus.isEmpty()) {
 			bmuService.sendEmail(job.getUser().getEmail(), MessageFormat.format(
 					textBundle.getString(ERROR_EMAIL_SUBJECT), job.getUser().getEmail()),
@@ -288,9 +308,10 @@ public class BackupJobRunner {
 							textBundle.getString(ERROR_EMAIL_TEXT), job.getUser().getEmail(),
 							job.getJobTitle()));
 		}
+		*/
 	}
 
-	private void doIndexing(Properties params, Storage storage, Job job, Client client) throws ActionException {
+	private void doIndexing(Properties params, Storage storage, BackupJobDTO job, Client client) throws ActionException {
 		// If we do indexing, the Thumbnail renderer needs to run before!
 		Action thumbnailAction = ((PluginImpl)plugins).getAction("org.backmeup.thumbnail");
 //		thumbnailAction.doAction(params, storage, job, new JobStatusProgressor(job, "thumbnailAction"));
@@ -304,44 +325,44 @@ public class BackupJobRunner {
 		client.close();
 	}
 	
-	private JobStatus addStatusToDb(JobStatus status) {
-		logger.debug("Job status: {}", status.getMessage());
-		bmuService.saveStatus(status);
-		return status;
-	}
+//	private JobStatus addStatusToDb(JobStatus status) {
+//		logger.debug("Job status: {}", status.getMessage());
+//		bmuService.saveStatus(status);
+//		return status;
+//	}
 
-	private void deleteOldStatus(Job persistentJob) {
-		bmuService.deleteStatusBefore(persistentJob.getJobId(), new Date());
-	}
+//	private void deleteOldStatus(BackupJobDTO persistentJob) {
+//		bmuService.deleteStatusBefore(persistentJob.getJobId(), new Date());
+//	}
 
-	private void storeJobProtocol(Job job, JobProtocolDTO protocol, int storedEntriesCount, boolean success) {
+	private void storeJobProtocol(BackupJobDTO job, JobProtocolDTO protocol, int storedEntriesCount, boolean success) {
 		// remove old entries, then store the new one
 		bmuService.deleteJobProtocolByUsername(job.getUser().getUsername());
 
-		protocol.setUser(job.getUser());
-		protocol.setJobId(job.getJobId());
+//		protocol.setUser(job.getUser());
+//		protocol.setJobId(job.getJobId());
 		protocol.setSuccessful(success);
-		protocol.setTotalStoredEntries(storedEntriesCount);
+		protocol.setProcessedItems(storedEntriesCount);
 
 		if (protocol.isSuccessful()) {
-			job.setLastSuccessful(protocol.getExecutionTime());
-			job.setStatus(BackupJobStatus.successful);
+//			job.setLastSuccessful(protocol.getExecutionTime());
+			job.setJobStatus(JobStatus.successful);
 		} else {
-			job.setLastFailed(protocol.getExecutionTime());
-			job.setStatus(BackupJobStatus.error);
+//			job.setLastFailed(protocol.getExecutionTime());
+			job.setJobStatus(JobStatus.error);
 		}
 
 		bmuService.saveJobProtocol(job.getUser().getUsername(), job.getJobId(), protocol);
 	}
 
-	private String generateTmpDirName(Job job, DatasourceProfile profile) {
+	private String generateTmpDirName(BackupJobDTO job, PluginProfileDTO profile) {
 		SimpleDateFormat formatter = null;
 		Date date = new Date();
 
-		Long profileid = profile.getDatasourceId();
+		Long profileid = profile.getProfileId();
 		Long jobid = job.getJobId();
 		// Take only last part of "org.backmeup.xxxx" (xxxx)
-		String profilename = getLastSplitElement(profile.getDescription(), "\\.");
+		String profilename = getLastSplitElement(profile.getPluginId(), "\\.");
 
 		formatter = new SimpleDateFormat(backupName.replaceAll("%PROFILEID%", profileid.toString()).replaceAll("%SOURCE%", profilename));
 
@@ -360,17 +381,18 @@ public class BackupJobRunner {
 
 	private class JobStatusProgressor implements Progressable {
 
-		private final Job job;
+		private final BackupJobDTO job;
 		private final String category;
 
-		public JobStatusProgressor(Job job, String category) {
+		public JobStatusProgressor(BackupJobDTO job, String category) {
 			this.job = job;
 			this.category = category;
 		}
 
 		@Override
 		public void progress(String message) {
-			addStatusToDb(new JobStatus(job.getJobId(), "info", category, new Date().getTime(),  message));
+//			addStatusToDb(new JobStatus(job.getJobId(), "info", category, new Date().getTime(),  message));
+			logger.info("Job {} [{}] {}", job.getJobId(), category, message);
 		}
 	}
 }

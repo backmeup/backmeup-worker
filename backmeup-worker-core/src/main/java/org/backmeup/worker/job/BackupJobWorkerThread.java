@@ -2,7 +2,7 @@ package org.backmeup.worker.job;
 
 import org.backmeup.keyserver.client.KeyserverFacade;
 import org.backmeup.keyserver.client.impl.KeyserverClient;
-import org.backmeup.model.BackupJob;
+import org.backmeup.model.dto.BackupJobDTO;
 import org.backmeup.plugin.Plugin;
 import org.backmeup.plugin.api.storage.Storage;
 import org.backmeup.service.client.BackmeupServiceFacade;
@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 public class BackupJobWorkerThread implements Runnable {
 	private final Logger logger = LoggerFactory.getLogger(BackupJobWorkerThread.class);
 	
-	private final BackupJob backupJob;
+	private final BackupJobDTO backupJob;
 	private final String backupName;
 	
 	private final String indexHost;
@@ -26,7 +26,7 @@ public class BackupJobWorkerThread implements Runnable {
 	private final KeyserverFacade keyserverClient;
 	private final BackmeupServiceFacade bmuServiceClient;
 
-	public BackupJobWorkerThread(BackupJob backupJob, Plugin plugins, String indexHost, int indexPort, String jobTempDir, String backupName) {
+	public BackupJobWorkerThread(BackupJobDTO backupJob, Plugin plugins, String indexHost, int indexPort, String jobTempDir, String backupName) {
 		super();
 		this.backupJob = backupJob;
 		this.backupName = backupName;

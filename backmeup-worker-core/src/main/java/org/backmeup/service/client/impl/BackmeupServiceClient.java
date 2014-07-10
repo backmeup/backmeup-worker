@@ -19,9 +19,9 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.backmeup.model.Status;
-import org.backmeup.model.dto.Job;
+import org.backmeup.model.dto.BackupJobDTO;
+import org.backmeup.model.dto.BackupJobDTO.JobStatus;
 import org.backmeup.model.dto.JobProtocolDTO;
-import org.backmeup.model.dto.JobStatus;
 import org.backmeup.model.exceptions.BackMeUpException;
 import org.backmeup.service.client.BackmeupServiceFacade;
 import org.slf4j.Logger;
@@ -124,31 +124,28 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 		GET, DELETE, PUT, POST
 	}
 
-	@Override
 	public Status saveStatus(JobStatus status) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
-	@Override
 	public void deleteStatusBefore(Long jobId, Date timeStamp) {
 		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
-	public Job findBackupJobById(String username, Long jobId) {
+	public BackupJobDTO findBackupJobById(String username, Long jobId) {
 		Gson g = new Gson();
 		Result r = execute("/jobs/" + username + "/" + jobId + "/full", ReqType.GET, null);
 		if (r.response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
 			throw new BackMeUpException("Failed to retrieve BackupJob: " + r.content);
 		}
 		logger.debug("findBackupJobById: " + r.content);
-		return g.fromJson(r.content, Job.class);
+		return g.fromJson(r.content, BackupJobDTO.class);
 	}
 
-//	@Override
-//	public Job saveBackupJob(Job backupJob) {
+	@Override
+	public BackupJobDTO updateBackupJob(BackupJobDTO backupJob) {
 //		Gson g = new Gson();
 //		String json = g.toJson(backupJob);
 //		Result r = execute("/jobs/" + backupJob.getUser().getUsername() + "/" + backupJob.getJobId() + "/full", ReqType.PUT, json);
@@ -157,25 +154,26 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 //		}
 //		logger.debug("saveBackupJob: " + r.content);
 //		return g.fromJson(r.content, Job.class);
-//	}
+		return null;
+	}
 
 	@Override
 	public void saveJobProtocol(String username, Long jobId, JobProtocolDTO protocol) {
-		Gson g = new Gson();
-		String json = g.toJson(protocol);
-		Result r = execute("/jobs/" + username + "/" + jobId + "/protocol", ReqType.POST, json);
-		if (r.response.getStatusLine().getStatusCode() != HttpStatus.SC_NO_CONTENT) {
-			throw new BackMeUpException("Failed to save job protocols: " + r.content);
-		}
-		logger.debug("saveBackupJob: " + r.content);
+//		Gson g = new Gson();
+//		String json = g.toJson(protocol);
+//		Result r = execute("/jobs/" + username + "/" + jobId + "/protocol", ReqType.POST, json);
+//		if (r.response.getStatusLine().getStatusCode() != HttpStatus.SC_NO_CONTENT) {
+//			throw new BackMeUpException("Failed to save job protocols: " + r.content);
+//		}
+//		logger.debug("saveBackupJob: " + r.content);
 	}
 
 	@Override
 	public void deleteJobProtocolByUsername(String username) {
-		Result r = execute("/jobs/" + username + "/protocol", ReqType.DELETE, null);
-		if (r.response.getStatusLine().getStatusCode() != HttpStatus.SC_NO_CONTENT) {
-			throw new BackMeUpException("Failed to delete job protocols: " + r.content);
-		}
+//		Result r = execute("/jobs/" + username + "/protocol", ReqType.DELETE, null);
+//		if (r.response.getStatusLine().getStatusCode() != HttpStatus.SC_NO_CONTENT) {
+//			throw new BackMeUpException("Failed to delete job protocols: " + r.content);
+//		}
 	}
 
 	@Override
