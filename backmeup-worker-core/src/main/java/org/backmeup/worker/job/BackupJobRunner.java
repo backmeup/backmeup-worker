@@ -80,18 +80,18 @@ public class BackupJobRunner {
 		this.backupName = backupName;
 	}
 
-	public void executeBackup(BackupJobDTO job, Storage storage) {
+	public void executeBackup(Long jobId, Storage storage) {
 
 		// use the job which is stored within the database
-		BackupJobDTO persistentJob = bmuService.findBackupJobById(job.getUser().getUsername(), job.getJobId());
+		BackupJobDTO backupJob = bmuService.getBackupJob(jobId);
 		// when will the next access to the access data occur? current time + delay
-		Long backupDate = new Date().getTime() + persistentJob.getDelay();
+		Long backupDate = new Date().getTime() + backupJob.getDelay();
 //		persistentJob.setBackupDate(new Date().getTime() + persistentJob.getDelay());
 
 		// get access data + new token for next access
 		Token token = new Token(
-				persistentJob.getToken().getToken(),
-				persistentJob.getToken().getTokenId(),
+				backupJob.getToken().getToken(),
+				backupJob.getToken().getTokenId(),
 				backupDate);
 		AuthDataResult authenticationData = keyserver.getData(token);
 
@@ -99,40 +99,40 @@ public class BackupJobRunner {
 		Token newToken = authenticationData.getNewToken();
 		
 		// Set the new token information in the current job
-		persistentJob.getToken().setTokenId(newToken.getTokenId());
-		persistentJob.getToken().setToken(newToken.getToken());
+		backupJob.getToken().setTokenId(newToken.getTokenId());
+		backupJob.getToken().setToken(newToken.getToken());
 //		persistentJob.getToken().setBackupDate(newToken.getBackupdate()); // TODO: add to TokenDTO
 		
-		persistentJob.setJobStatus(JobStatus.running);
+		backupJob.setJobStatus(JobStatus.running);
 
-		// Store newToken for the next backup schedule
-		// Only store token?
-		// Set job status 'running'
-		bmuService.updateBackupJob(persistentJob);
+		// Store newToken for the next backup and set status to running
+		bmuService.updateBackupJob(backupJob);
 
-		// Protocol Overview requires information about executed jobs
-		JobProtocolDTO protocol = new JobProtocolDTO();
-//		protocol.setSinkTitle(persistentJob.getSink().getTitle());
-		protocol.setExecutionTime(new Date().getTime());
+//		// Protocol Overview requires information about executed jobs
+//		JobProtocolDTO protocol = new JobProtocolDTO();
+////		protocol.setSinkTitle(persistentJob.getSink().getTitle());
+//		protocol.setExecutionTime(new Date().getTime());
 
 		// track the error status messages
-		List<JobStatus> errorStatus = new ArrayList<JobStatus>();
-
+//		List<JobStatus> errorStatus = new ArrayList<JobStatus>();
+		
+		Date jobStarted = new Date();
+		
 		// Open temporary storage
 		try {
-			Datasink sink = plugins.getDatasink(persistentJob.getSink().getPluginId());
-			Properties sinkProperties = authenticationData.getByProfileId(persistentJob.getSink().getProfileId());
+			Datasink sink = plugins.getDatasink(backupJob.getSink().getPluginId());
+			Properties sinkProperties = authenticationData.getByProfileId(backupJob.getSink().getProfileId());
 
 			// delete previously stored status, as we only need the latest
 //			deleteOldStatus(persistentJob);
 			
 //			addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.STARTED, StatusCategory.INFO, new Date().getTime()));
-			logger.info("Job " + persistentJob.getJobId() + " startet");
+			logger.info("Job " + backupJob.getJobId() + " startet");
 			
 			long previousSize = 0;
 
-			PluginProfileDTO sourceProfile = persistentJob.getSource();
-			String tmpDir = generateTmpDirName(persistentJob, sourceProfile);
+			PluginProfileDTO sourceProfile = backupJob.getSource();
+			String tmpDir = generateTmpDirName(backupJob, sourceProfile);
 			storage.open(tmpDir);
 
 			Datasource source = plugins.getDatasource(sourceProfile.getPluginId());
@@ -146,25 +146,25 @@ public class BackupJobRunner {
 			}
 
 //			addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOADING, StatusCategory.INFO, new Date().getTime()));
-			logger.info("Job " + persistentJob.getJobId() + " downloading");
+			logger.info("Job " + backupJob.getJobId() + " downloading");
 			
 			// Download from source
 			try {
-				source.downloadAll(sourceProperties, sourceOptions, storage, new JobStatusProgressor(persistentJob, "datasource"));
+				source.downloadAll(sourceProperties, sourceOptions, storage, new JobStatusProgressor(backupJob, "datasource"));
 			} catch (StorageException e) {
 //				logger.error("", e);
 //				errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOAD_FAILED, StatusCategory.WARNING, new Date().getTime(), e.getMessage())));
-				logger.warn("Job " + persistentJob.getJobId() + " faild with message: " + e);
+				logger.warn("Job " + backupJob.getJobId() + " faild with message: " + e);
 			} catch (DatasourceException e) {
 //				logger.error("", e);
 //				errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOAD_FAILED, StatusCategory.WARNING, new Date().getTime(), e.getMessage())));
-				logger.warn("Job " + persistentJob.getJobId() + " faild with message: " + e);
+				logger.warn("Job " + backupJob.getJobId() + " faild with message: " + e);
 			}
 
 			// for each datasource add an entry with bytes it consumed
 			long currentSize = storage.getDataObjectSize() - previousSize;
 //			protocol.addMember(new JobProtocolMemberDTO(protocol.getId(), "po.getProfile().getProfileName()", currentSize));
-			protocol.setSpace((int)currentSize);
+//			protocol.setSpace((int)currentSize);
 			previousSize = storage.getDataObjectSize();
 
 			// make properties global for the action loop. So the plugins can communicate (filesplitt + encryption)
@@ -174,10 +174,10 @@ public class BackupJobRunner {
 
 			// Execute Actions in sequence
 //			addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.PROCESSING, StatusCategory.INFO, new Date().getTime()));
-			logger.info("Job " + persistentJob.getJobId() + " processing");
+			logger.info("Job " + backupJob.getJobId() + " processing");
 
 			// add all properties which have been stored to the params collection
-			for (PluginProfileDTO actionProfile : persistentJob.getActions()) {
+			for (PluginProfileDTO actionProfile : backupJob.getActions()) {
 //				params.putAll(actionProfile.);
 				Properties actionProperties = authenticationData.getByProfileId(actionProfile.getProfileId());
 				params.putAll(actionProperties);
@@ -198,7 +198,7 @@ public class BackupJobRunner {
 			}
 
 			// has the indexer been requested during creation of the backup job?
-			List<PluginProfileDTO> actions = persistentJob.getActions();
+			List<PluginProfileDTO> actions = backupJob.getActions();
 			PluginProfileDTO indexer = null;
 			for (PluginProfileDTO actionProfile : actions) {
 				if ("org.backmeup.indexer".equals(actionProfile.getPluginId())) {
@@ -218,7 +218,7 @@ public class BackupJobRunner {
 
 			// TODO: Added getSortedActions in ActionProfileDTO
 			//				for (ActionProfile actionProfile : persistentJob.getSortedRequiredActions()) {
-			for (PluginProfileDTO actionProfile : persistentJob.getActions()) {
+			for (PluginProfileDTO actionProfile : backupJob.getActions()) {
 				String actionId = actionProfile.getPluginId();
 				Action action;
 				Client client = null;
@@ -241,19 +241,19 @@ public class BackupJobRunner {
 						// Do nothing - we ignore index action declaration in the job description and use
 						// the info from the user properties instead
 						if (doIndexing) {
-							doIndexing(params, storage, persistentJob, client);
+							doIndexing(params, storage, backupJob, client);
 						}
 
 					} else {
 						// Only happens in case Job was corrupted in the core - we'll handle that as a fatal error
 //						errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), "Unsupported Action: " + actionId)));
-						logger.error("Job " + persistentJob.getJobId() + " faild with unsupported action: " + actionId);
+						logger.error("Job " + backupJob.getJobId() + " faild with unsupported action: " + actionId);
 					}
 				} catch (ActionException e) {
 					// Should only happen in case of problems in the backmeup-service (file I/O, DB access, etc.)
 					// We'll handle that as a fatal error
 //					errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
-					logger.error("Job " + persistentJob.getJobId() + " faild with message: " + e);
+					logger.error("Job " + backupJob.getJobId() + " faild with message: " + e);
 				} finally {
 					if (client != null) {
 						client.close(); 
@@ -264,39 +264,64 @@ public class BackupJobRunner {
 				try {
 					// Upload to Sink
 //					addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.UPLOADING, StatusCategory.INFO, new Date().getTime()));
-					logger.info("Job " + persistentJob.getJobId() + " uploading");
+					logger.info("Job " + backupJob.getJobId() + " uploading");
 
 					sinkProperties.setProperty("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
-					sinkProperties.setProperty("org.backmeup.userid", persistentJob.getUser().getUserId() + "");
-					sink.upload(sinkProperties, storage, new JobStatusProgressor(persistentJob, "datasink"));
+					sinkProperties.setProperty("org.backmeup.userid", backupJob.getUser().getUserId() + "");
+					sink.upload(sinkProperties, storage, new JobStatusProgressor(backupJob, "datasink"));
 					
 //					addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.SUCCESSFUL, StatusCategory.INFO, new Date().getTime()));
-					logger.info("Job " + persistentJob.getJobId() + " successful");
+					logger.info("Job " + backupJob.getJobId() + " successful");
 				} catch (StorageException e) {
 //					logger.error("", e);
 //					errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
-					logger.error("Job " + persistentJob.getJobId() + " faild with message: " + e);
+					logger.error("Job " + backupJob.getJobId() + " faild with message: " + e);
 				}
 
 				// store job protocol within database
-				storeJobProtocol(persistentJob, protocol, storage.getDataObjectCount(), true);
+//				storeJobProtocol(backupJob, protocol, storage.getDataObjectCount(), true);
 
 				// Closing the storage means to remove all files in the temporary directory.
 				// Including the root directory and the parent (/..../jobId/BMU_xxxxx)!
 				// For debugging reasons, storage is not closed:
 				//storage.close();
+				
+				JobProtocolDTO protocol = new JobProtocolDTO();
+				protocol.setTimestamp(new Date().getTime());
+				protocol.setStart(jobStarted.getTime());
+				protocol.setExecutionTime(protocol.getTimestamp() - protocol.getStart());
+				protocol.setSuccessful(true);
+				protocol.setProcessedItems(storage.getDataObjectCount());
+				protocol.setSpace((int)currentSize);
+				
+				backupJob.addProtocol(protocol);
+				backupJob.setJobStatus(JobStatus.successful);
 			}
-		} catch (StorageException e) {
-//			logger.error("", e);
-			// job failed, store job protocol within database
-			storeJobProtocol(persistentJob, protocol, 0, false);
-//			errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
-			logger.error("Job " + persistentJob.getJobId() + " faild with message: " + e);
 		} catch (Exception e) {
 //			logger.error("", e);
-			storeJobProtocol(persistentJob, protocol, 0, false);
+//			storeJobProtocol(backupJob, protocol, 0, false);
+			
 //			errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
-			logger.error("Job " + persistentJob.getJobId() + " faild with message: " + e);			
+			logger.error("Job " + backupJob.getJobId() + " faild with message: " + e);	
+			
+			int processedItems = 0;
+			try {
+				processedItems = storage.getDataObjectCount();
+			} catch (StorageException e1) {
+				logger.error("", e);	
+			}
+			
+			JobProtocolDTO protocol = new JobProtocolDTO();
+			protocol.setTimestamp(new Date().getTime());
+			protocol.setStart(jobStarted.getTime());
+			protocol.setExecutionTime(protocol.getTimestamp() - protocol.getStart());
+			protocol.setSuccessful(false);
+			protocol.setProcessedItems(processedItems);
+			protocol.setSpace(0);
+			protocol.setMessage(e.toString());
+			
+			backupJob.addProtocol(protocol);
+			backupJob.setJobStatus(JobStatus.error);
 		}
 		
 		// send error message, if there were any error status messages
@@ -309,6 +334,8 @@ public class BackupJobRunner {
 							job.getJobTitle()));
 		}
 		*/
+		
+		bmuService.updateBackupJob(backupJob);
 	}
 
 	private void doIndexing(Properties params, Storage storage, BackupJobDTO job, Client client) throws ActionException {
@@ -335,25 +362,25 @@ public class BackupJobRunner {
 //		bmuService.deleteStatusBefore(persistentJob.getJobId(), new Date());
 //	}
 
-	private void storeJobProtocol(BackupJobDTO job, JobProtocolDTO protocol, int storedEntriesCount, boolean success) {
-		// remove old entries, then store the new one
-		bmuService.deleteJobProtocolByUsername(job.getUser().getUsername());
-
-//		protocol.setUser(job.getUser());
-//		protocol.setJobId(job.getJobId());
-		protocol.setSuccessful(success);
-		protocol.setProcessedItems(storedEntriesCount);
-
-		if (protocol.isSuccessful()) {
-//			job.setLastSuccessful(protocol.getExecutionTime());
-			job.setJobStatus(JobStatus.successful);
-		} else {
-//			job.setLastFailed(protocol.getExecutionTime());
-			job.setJobStatus(JobStatus.error);
-		}
-
-		bmuService.saveJobProtocol(job.getUser().getUsername(), job.getJobId(), protocol);
-	}
+//	private void storeJobProtocol(BackupJobDTO job, JobProtocolDTO protocol, int storedEntriesCount, boolean success) {
+//		// remove old entries, then store the new one
+//		bmuService.deleteJobProtocolByUsername(job.getUser().getUsername());
+//
+////		protocol.setUser(job.getUser());
+////		protocol.setJobId(job.getJobId());
+//		protocol.setSuccessful(success);
+//		protocol.setProcessedItems(storedEntriesCount);
+//
+//		if (protocol.isSuccessful()) {
+////			job.setLastSuccessful(protocol.getExecutionTime());
+//			job.setJobStatus(JobStatus.successful);
+//		} else {
+////			job.setLastFailed(protocol.getExecutionTime());
+//			job.setJobStatus(JobStatus.error);
+//		}
+//
+//		bmuService.saveJobProtocol(job.getUser().getUsername(), job.getJobId(), protocol);
+//	}
 
 	private String generateTmpDirName(BackupJobDTO job, PluginProfileDTO profile) {
 		SimpleDateFormat formatter = null;

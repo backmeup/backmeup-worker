@@ -36,7 +36,7 @@ public class BackupJobWorkerThread implements Runnable {
 		this.indexPort = indexPort;
 		
 		this.keyserverClient = new KeyserverClient("http", "localhost:8080", "/backmeup-keyserver"); // TODO
-		this.bmuServiceClient = new BackmeupServiceClient("http", "localhost", "8080", "/backmeup-service-rest/backmeup"); // TODO
+		this.bmuServiceClient = new BackmeupServiceClient("http", "localhost", "8080", "/backmeup-service-rest"); // TODO
 	}
 
 	@Override
@@ -44,7 +44,7 @@ public class BackupJobWorkerThread implements Runnable {
 		try {
 			BackupJobRunner runner = new BackupJobRunner(plugins, keyserverClient, bmuServiceClient, indexHost, indexPort, jobTempDir, backupName);
 			Storage storage = ((PluginImpl)plugins).service(Storage.class, "(name=" + "org.backmeup.localfilesystemstorage" + ")");
-			runner.executeBackup(backupJob, storage);
+			runner.executeBackup(backupJob.getJobId(), storage);
 		} catch (Exception e) {
 			logger.error("Failed to process job", e);
 		}
