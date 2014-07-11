@@ -50,7 +50,7 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 
 	@Override
 	public BackupJobDTO getBackupJob(Long jobId) {
-		Result r = execute("/backupjobs/" + jobId, ReqType.GET, null);
+		Result r = execute("/backupjobs/" + jobId + "?expandUser=true&expandToken=true&expandProfiles=true&expandProtocol=true", ReqType.GET, null, "7;password1");
 		if (r.response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
 			throw new BackMeUpException("Failed to retrieve BackupJob: " + r.content);
 		}
@@ -90,8 +90,12 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 	private DefaultHttpClient createClient() {
 		return new DefaultHttpClient();
 	}
-
+	
 	private Result execute(String path, ReqType type, String jsonParams) {
+		return execute(path, type, jsonParams, "");
+	}
+
+	private Result execute(String path, ReqType type, String jsonParams, String authToken) {
 		HttpClient client = createClient();
 
 		int rPort = Integer.parseInt(port);
@@ -134,6 +138,10 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 				break;
 			}
 
+			if(!authToken.isEmpty()) {
+				request.setHeader("Authorization", authToken);
+			}
+			
 			HttpResponse response = client.execute(request);
 			Result r = new Result();
 			r.response = response;
