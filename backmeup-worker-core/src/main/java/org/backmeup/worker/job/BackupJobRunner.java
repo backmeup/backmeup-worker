@@ -175,6 +175,12 @@ public class BackupJobRunner {
 			// Execute Actions in sequence
 //			addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.PROCESSING, StatusCategory.INFO, new Date().getTime()));
 			logger.info("Job " + backupJob.getJobId() + " processing");
+			
+			// if no actions are specified for this backup job,
+			// initialize field with empty list
+			if(backupJob.getActions() == null){
+				backupJob.setActions(new ArrayList<PluginProfileDTO>());
+			}
 
 			// add all properties which have been stored to the params collection
 			for (PluginProfileDTO actionProfile : backupJob.getActions()) {
@@ -259,44 +265,45 @@ public class BackupJobRunner {
 						client.close(); 
 					}
 				}
-
-
-				try {
-					// Upload to Sink
-//					addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.UPLOADING, StatusCategory.INFO, new Date().getTime()));
-					logger.info("Job " + backupJob.getJobId() + " uploading");
-
-					sinkProperties.setProperty("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
-					sinkProperties.setProperty("org.backmeup.userid", backupJob.getUser().getUserId() + "");
-					sink.upload(sinkProperties, storage, new JobStatusProgressor(backupJob, "datasink"));
-					
-//					addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.SUCCESSFUL, StatusCategory.INFO, new Date().getTime()));
-					logger.info("Job " + backupJob.getJobId() + " successful");
-				} catch (StorageException e) {
-//					logger.error("", e);
-//					errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
-					logger.error("Job " + backupJob.getJobId() + " faild with message: " + e);
-				}
-
-				// store job protocol within database
-//				storeJobProtocol(backupJob, protocol, storage.getDataObjectCount(), true);
-
-				// Closing the storage means to remove all files in the temporary directory.
-				// Including the root directory and the parent (/..../jobId/BMU_xxxxx)!
-				// For debugging reasons, storage is not closed:
-				//storage.close();
-				
-				JobProtocolDTO protocol = new JobProtocolDTO();
-				protocol.setTimestamp(new Date().getTime());
-				protocol.setStart(jobStarted.getTime());
-				protocol.setExecutionTime(protocol.getTimestamp() - protocol.getStart());
-				protocol.setSuccessful(true);
-				protocol.setProcessedItems(storage.getDataObjectCount());
-				protocol.setSpace((int)currentSize);
-				
-				backupJob.addProtocol(protocol);
-				backupJob.setJobStatus(JobStatus.successful);
 			}
+
+
+			try {
+				// Upload to Sink
+//				addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.UPLOADING, StatusCategory.INFO, new Date().getTime()));
+				logger.info("Job " + backupJob.getJobId() + " uploading");
+
+				sinkProperties.setProperty("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
+				sinkProperties.setProperty("org.backmeup.userid", backupJob.getUser().getUserId() + "");
+				sink.upload(sinkProperties, storage, new JobStatusProgressor(backupJob, "datasink"));
+
+//				addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.SUCCESSFUL, StatusCategory.INFO, new Date().getTime()));
+				logger.info("Job " + backupJob.getJobId() + " successful");
+			} catch (StorageException e) {
+//				logger.error("", e);
+//				errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
+				logger.error("Job " + backupJob.getJobId() + " faild with message: " + e);
+			}
+
+			// store job protocol within database
+//			storeJobProtocol(backupJob, protocol, storage.getDataObjectCount(), true);
+
+			// Closing the storage means to remove all files in the temporary directory.
+			// Including the root directory and the parent (/..../jobId/BMU_xxxxx)!
+			// For debugging reasons, storage is not closed:
+			//storage.close();
+
+			JobProtocolDTO protocol = new JobProtocolDTO();
+			protocol.setTimestamp(new Date().getTime());
+			protocol.setStart(jobStarted.getTime());
+			protocol.setExecutionTime(protocol.getTimestamp() - protocol.getStart());
+			protocol.setSuccessful(true);
+			protocol.setProcessedItems(storage.getDataObjectCount());
+			protocol.setSpace((int)currentSize);
+
+			backupJob.addProtocol(protocol);
+			backupJob.setJobStatus(JobStatus.successful);
+
 		} catch (Exception e) {
 //			logger.error("", e);
 //			storeJobProtocol(backupJob, protocol, 0, false);
