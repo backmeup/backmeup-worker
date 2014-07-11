@@ -3,6 +3,9 @@ package org.backmeup.service.client.impl;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
@@ -15,8 +18,9 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.backmeup.model.dto.BackupJobDTO;
 import org.backmeup.model.exceptions.BackMeUpException;
 import org.backmeup.service.client.BackmeupServiceFacade;
@@ -37,6 +41,8 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 
 	private final String basePath;
 	
+	private static final String ACCESS_TOKEN = "secretToken";
+	
 	// Constructors -----------------------------------------------------------
 	
 	public BackmeupServiceClient(String scheme, String host, String port, String basePath) {
@@ -50,7 +56,14 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 
 	@Override
 	public BackupJobDTO getBackupJob(Long jobId) {
-		Result r = execute("/backupjobs/" + jobId + "?expandUser=true&expandToken=true&expandProfiles=true&expandProtocol=true", ReqType.GET, null, "7;password1");
+		
+		Map<String, String> params = new HashMap<>();
+		params.put("expandUser", "true");
+		params.put("expandToken", "true");
+		params.put("expandProfiles", "true");
+		params.put("expandProtocol", "true");
+				
+		Result r = execute("/backupjobs/" + jobId, ReqType.GET, params, null, ACCESS_TOKEN);
 		if (r.response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
 			throw new BackMeUpException("Failed to retrieve BackupJob: " + r.content);
 		}
@@ -71,7 +84,7 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 			ObjectMapper mapper = createJsonMapper();
 			String json = mapper.writeValueAsString(backupJob);
 
-			Result r = execute("/backupjobs/" + backupJob.getJobId(), ReqType.PUT, json);
+			Result r = execute("/backupjobs/" + backupJob.getJobId(), ReqType.PUT, null, json, ACCESS_TOKEN);
 			if (r.response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
 				throw new BackMeUpException("Failed to update BackupJob: " + r.content);
 			}
@@ -87,15 +100,11 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 	
 	// Private methods --------------------------------------------------------
 
-	private DefaultHttpClient createClient() {
-		return new DefaultHttpClient();
+	private HttpClient createClient() {
+		return HttpClientBuilder.create().build();
 	}
 	
-	private Result execute(String path, ReqType type, String jsonParams) {
-		return execute(path, type, jsonParams, "");
-	}
-
-	private Result execute(String path, ReqType type, String jsonParams, String authToken) {
+	private Result execute(String path, ReqType type, Map<String, String> queryParams, String jsonParams, String authToken) {
 		HttpClient client = createClient();
 
 		int rPort = Integer.parseInt(port);
@@ -112,12 +121,29 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 		}
 
 		try {
-			URI registerUri = new URI(scheme, null, rHost, rPort, rPath, null, null);
+			URIBuilder uriBuilder = new URIBuilder();
+			uriBuilder.setScheme(scheme).setHost(rHost).setPort(rPort).setPath(rPath);
+			
+			if(queryParams != null) {
+				for(Entry<String, String> param : queryParams.entrySet()) {
+					uriBuilder.addParameter(param.getKey(), param.getValue());
+				}
+			}
+			
+			URI registerUri = uriBuilder.build();
 			HttpUriRequest request;
 
 			switch (type) {
 			case PUT:
-				request = new HttpPut(registerUri);
+				HttpPut put = new HttpPut(registerUri);
+				if (jsonParams != null) {
+					StringEntity entity = new StringEntity(jsonParams, "UTF-8");					
+					put.setEntity(entity);
+
+					put.setHeader("Accept", "application/json");
+					put.setHeader("Content-type", "application/json");
+				}
+				request = put;
 				break;
 			case DELETE:
 				request = new HttpDelete(registerUri);
