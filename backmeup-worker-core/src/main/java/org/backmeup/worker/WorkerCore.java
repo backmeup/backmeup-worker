@@ -7,6 +7,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.backmeup.model.BackupJob;
 import org.backmeup.model.dto.BackupJobDTO;
 import org.backmeup.model.exceptions.BackMeUpException;
 import org.backmeup.plugin.Plugin;
@@ -179,7 +180,7 @@ public class WorkerCore {
 			jobReceiver.setPaused(true);
 		}
 		
-		BackupJobDTO backupJob = jre.getBackupJob();
+		BackupJob backupJob = jre.getBackupJob();
 		Runnable backupJobWorker = new BackupJobWorkerThread(backupJob, plugins, indexHost, indexPort, jobTempDir, backupName);
 		executorPool.execute(backupJobWorker);
 	}

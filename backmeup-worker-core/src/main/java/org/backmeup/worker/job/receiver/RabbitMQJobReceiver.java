@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.backmeup.model.dto.BackupJobDTO;
+import org.backmeup.model.BackupJob;
 import org.backmeup.model.exceptions.BackMeUpException;
 import org.backmeup.model.serializer.JsonSerializer;
 import org.slf4j.Logger;
@@ -122,7 +122,7 @@ public class RabbitMQJobReceiver implements JobReceiver{
 									String message = new String(delivery.getBody());
 									logger.info("Job received: " + message);
 
-									BackupJobDTO job = JsonSerializer.deserialize(message, BackupJobDTO.class);
+									BackupJob job = JsonSerializer.deserialize(message, BackupJob.class);
 									fireEvent(new JobReceivedEvent(this, job));
 									
 									// Delay further receiving to ge the callback listener a chance
