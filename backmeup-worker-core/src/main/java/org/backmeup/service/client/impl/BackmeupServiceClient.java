@@ -41,7 +41,7 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 
 	private final String basePath;
 	
-	private static final String ACCESS_TOKEN = "secretToken";
+	private static final String ACCESS_TOKEN = "BACKMEUPWORKER;mysecret!";
 	
 	// Constructors -----------------------------------------------------------
 	
