@@ -1,11 +1,8 @@
 package org.backmeup.keyserver.client.impl;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.security.KeyStore;
-import java.security.SecureRandom;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
@@ -17,15 +14,9 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.conn.scheme.Scheme;
-import org.apache.http.conn.scheme.SchemeRegistry;
-import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.impl.conn.SingleClientConnManager;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicHeader;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpParams;
 import org.apache.http.protocol.HTTP;
 import org.backmeup.keyserver.client.KeyserverFacade;
 import org.backmeup.keyserver.model.AuthDataResult;
@@ -54,21 +45,21 @@ public class KeyserverClient implements KeyserverFacade {
 
 	private final String path;
 
-	private String keystore;
-
-	private String keystoreType;
-
-	private String keystorePwd;
-
-	private String truststore;
-
-	private String truststoreType;
-
-	private String truststorePwd;
-
-	private Boolean allowAllHostnames;
-
-	private SchemeRegistry schemeRegistry;
+//	private String keystore;
+//
+//	private String keystoreType;
+//
+//	private String keystorePwd;
+//
+//	private String truststore;
+//
+//	private String truststoreType;
+//
+//	private String truststorePwd;
+//
+//	private Boolean allowAllHostnames;
+//
+//	private SchemeRegistry schemeRegistry;
 
 	public KeyserverClient(String scheme, String host, String path) {
 		this.scheme = scheme;
@@ -76,10 +67,11 @@ public class KeyserverClient implements KeyserverFacade {
 		this.path = path;
 	}
 
-	private DefaultHttpClient createClient() {
+	private HttpClient createClient() {
 		if (scheme.equals("http")) {
-			return new DefaultHttpClient();
+			return HttpClientBuilder.create().build();
 		} else if (scheme.equals("https")) {
+			/*
 			if (schemeRegistry == null) {
 				try {
 					KeyStore keystore = KeyStore.getInstance(keystoreType != null ? keystoreType : KeyStore.getDefaultType());
@@ -123,6 +115,8 @@ public class KeyserverClient implements KeyserverFacade {
 			
 			final HttpParams httpParams = new BasicHttpParams();
 			return new DefaultHttpClient( new SingleClientConnManager(schemeRegistry), httpParams);
+			*/
+			throw new BackMeUpException(String.format("Keyserver scheme \"%s\" not supported", scheme));
 		} else {
 			logger.error("Keyserver scheme not supported: %s", scheme);
 			throw new BackMeUpException(String.format("Keyserver scheme \"%s\" not supported", scheme));
