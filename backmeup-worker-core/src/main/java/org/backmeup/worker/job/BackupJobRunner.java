@@ -222,8 +222,8 @@ public class BackupJobRunner {
 //				actions.add(new PluginProfileDTO(ad.getId(), ad.getPriority(), new HashMap<String, String>()));
 			}
 
-			// TODO: Added getSortedActions in ActionProfileDTO
-			//				for (ActionProfile actionProfile : persistentJob.getSortedRequiredActions()) {
+			// The action maybe need to be sorted by their priority, e.g. to guarantee that encryption happens last
+			// e.g. persistentJob.getSortedRequiredActions()
 			for (PluginProfileDTO actionProfile : backupJob.getActions()) {
 				String actionId = actionProfile.getPluginId();
 				Action action;
