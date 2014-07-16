@@ -43,7 +43,7 @@ public class WorkerCore {
 	
 	private final String indexHost;
 	private final int    indexPort;
-	private final String indexClusterName;
+//	private final String indexClusterName;
 	
 	private final String keyserverScheme;
 	private final String keyserverHost;
@@ -81,7 +81,7 @@ public class WorkerCore {
 		
 		this.indexHost = Configuration.getProperty("backmeup.index.host");
 		this.indexPort = Integer.parseInt(Configuration.getProperty("backmeup.index.port"));
-		this.indexClusterName = Configuration.getProperty("backmeup.index.cluster.name");
+//		this.indexClusterName = Configuration.getProperty("backmeup.index.cluster.name");
 		
 		this.keyserverScheme = Configuration.getProperty("keyserver.scheme");
 		this.keyserverHost = Configuration.getProperty("keyserver.host");
