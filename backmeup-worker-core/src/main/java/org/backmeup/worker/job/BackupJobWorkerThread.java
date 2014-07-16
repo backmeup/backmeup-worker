@@ -25,12 +25,18 @@ public class BackupJobWorkerThread implements Runnable {
 	private final String keyserverHost;
 	private final String keyserverPath;
 	
+	private final String bmuServiceScheme;
+	private final String bmuServiceHost;
+	private final String bmuServicePath;
+	private final String bmuServiceAccessToken;
+	
 	private final Plugin plugins;
 	private final KeyserverFacade keyserverClient;
 	private final BackmeupServiceFacade bmuServiceClient;
 
 	public BackupJobWorkerThread(BackupJob backupJob, Plugin plugins, String indexHost, int indexPort, 
-			String keyserverScheme, String keyserverHost, String keyserverPath, 
+			String serviceScheme, String serviceHost, String servicePath, String serviceAccessToken,
+			String keyserverScheme, String keyserverHost, String keyserverPath,
 			String jobTempDir, String backupName) {
 		super();
 		this.backupJob = backupJob;
@@ -42,9 +48,13 @@ public class BackupJobWorkerThread implements Runnable {
 		this.keyserverScheme = keyserverScheme;
 		this.keyserverHost = keyserverHost;
 		this.keyserverPath = keyserverPath;
+		this.bmuServiceScheme = serviceScheme;
+		this.bmuServiceHost = serviceHost;
+		this.bmuServicePath = servicePath;
+		this.bmuServiceAccessToken = serviceAccessToken;
 		
 		this.keyserverClient = new KeyserverClient(this.keyserverScheme, this.keyserverHost, this.keyserverPath); 
-		this.bmuServiceClient = new BackmeupServiceClient("http", "localhost", "8080", "/backmeup-service-rest"); // TODO
+		this.bmuServiceClient = new BackmeupServiceClient(bmuServiceScheme, bmuServiceHost, bmuServicePath, bmuServiceAccessToken);
 	}
 
 	@Override

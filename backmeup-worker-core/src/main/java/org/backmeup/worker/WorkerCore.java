@@ -8,7 +8,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.backmeup.model.BackupJob;
-import org.backmeup.model.dto.BackupJobDTO;
 import org.backmeup.model.exceptions.BackMeUpException;
 import org.backmeup.plugin.Plugin;
 import org.backmeup.worker.config.Configuration;
@@ -50,6 +49,11 @@ public class WorkerCore {
 	private final String keyserverHost;
 	private final String keyserverPath;
 	
+	private final String bmuServiceScheme;
+	private final String bmuServiceHost;
+	private final String bmuServicePath;
+	private final String bmuServiceAccessToken;
+	
 	private final String jobTempDir;
 	private final String backupName;
 	
@@ -82,6 +86,11 @@ public class WorkerCore {
 		this.keyserverScheme = Configuration.getProperty("keyserver.scheme");
 		this.keyserverHost = Configuration.getProperty("keyserver.host");
 		this.keyserverPath = Configuration.getProperty("keyserver.path");
+		
+		this.bmuServiceScheme = Configuration.getProperty("backmeup.service.scheme");
+		this.bmuServiceHost = Configuration.getProperty("backmeup.service.host");
+		this.bmuServicePath = Configuration.getProperty("backmeup.service.path");
+		this.bmuServiceAccessToken = Configuration.getProperty("backmeup.service.accessToken");
 		
 		this.jobTempDir = Configuration.getProperty("backmeup.job.temporaryDirectory");
 		this.backupName = Configuration.getProperty("backmeup.job.backupname");
@@ -189,7 +198,12 @@ public class WorkerCore {
 		}
 		
 		BackupJob backupJob = jre.getBackupJob();
-		Runnable backupJobWorker = new BackupJobWorkerThread(backupJob, plugins, indexHost, indexPort, keyserverScheme, keyserverHost, keyserverPath,jobTempDir, backupName);
+		Runnable backupJobWorker = new BackupJobWorkerThread(
+				backupJob, plugins, 
+				indexHost, indexPort, 
+				bmuServiceScheme, bmuServiceHost, bmuServicePath, bmuServiceAccessToken,
+				keyserverScheme, keyserverHost, keyserverPath,
+				jobTempDir, backupName);
 		executorPool.execute(backupJobWorker);
 	}
 	

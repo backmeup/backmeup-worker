@@ -31,25 +31,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class BackmeupServiceClient implements BackmeupServiceFacade {
+	private static final int DEFAULT_PORT = 80;
+
 	private final Logger logger = LoggerFactory.getLogger(BackmeupServiceClient.class);
 
 	private final String scheme;
 
 	private final String host;
 
-	private final String port;
-
 	private final String basePath;
 	
-	private static final String ACCESS_TOKEN = "BACKMEUPWORKER;mysecret!";
+	private final String accessToken;
 	
 	// Constructors -----------------------------------------------------------
-	
-	public BackmeupServiceClient(String scheme, String host, String port, String basePath) {
+		
+	public BackmeupServiceClient(String scheme, String host, String basePath, String accessToken) {
 		this.scheme = scheme;
 		this.host = host;
-		this.port = port;
 		this.basePath = basePath;
+		this.accessToken = accessToken;
 	}
 	
 	// Public methods ---------------------------------------------------------
@@ -63,7 +63,7 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 		params.put("expandProfiles", "true");
 		params.put("expandProtocol", "true");
 				
-		Result r = execute("/backupjobs/" + jobId, ReqType.GET, params, null, ACCESS_TOKEN);
+		Result r = execute("/backupjobs/" + jobId, ReqType.GET, params, null, accessToken);
 		if (r.response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
 			throw new BackMeUpException("Failed to retrieve BackupJob: " + r.content);
 		}
@@ -84,7 +84,7 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 			ObjectMapper mapper = createJsonMapper();
 			String json = mapper.writeValueAsString(backupJob);
 
-			Result r = execute("/backupjobs/" + backupJob.getJobId(), ReqType.PUT, null, json, ACCESS_TOKEN);
+			Result r = execute("/backupjobs/" + backupJob.getJobId(), ReqType.PUT, null, json, accessToken);
 			if (r.response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
 				throw new BackMeUpException("Failed to update BackupJob: " + r.content);
 			}
@@ -107,7 +107,7 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 	private Result execute(String path, ReqType type, Map<String, String> queryParams, String jsonParams, String authToken) {
 		HttpClient client = createClient();
 
-		int rPort = Integer.parseInt(port);
+		int rPort = DEFAULT_PORT;
 		String rPath = basePath + path;
 		String rHost = host;
 		if (host.contains(":")) {
