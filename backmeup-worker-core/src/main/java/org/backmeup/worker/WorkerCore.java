@@ -46,6 +46,10 @@ public class WorkerCore {
 	private final int    indexPort;
 	private final String indexClusterName;
 	
+	private final String keyserverScheme;
+	private final String keyserverHost;
+	private final String keyserverPath;
+	
 	private final String jobTempDir;
 	private final String backupName;
 	
@@ -74,6 +78,10 @@ public class WorkerCore {
 		this.indexHost = Configuration.getProperty("backmeup.index.host");
 		this.indexPort = Integer.parseInt(Configuration.getProperty("backmeup.index.port"));
 		this.indexClusterName = Configuration.getProperty("backmeup.index.cluster.name");
+		
+		this.keyserverScheme = Configuration.getProperty("keyserver.scheme");
+		this.keyserverHost = Configuration.getProperty("keyserver.host");
+		this.keyserverPath = Configuration.getProperty("keyserver.path");
 		
 		this.jobTempDir = Configuration.getProperty("backmeup.job.temporaryDirectory");
 		this.backupName = Configuration.getProperty("backmeup.job.backupname");
@@ -181,7 +189,7 @@ public class WorkerCore {
 		}
 		
 		BackupJob backupJob = jre.getBackupJob();
-		Runnable backupJobWorker = new BackupJobWorkerThread(backupJob, plugins, indexHost, indexPort, jobTempDir, backupName);
+		Runnable backupJobWorker = new BackupJobWorkerThread(backupJob, plugins, indexHost, indexPort, keyserverScheme, keyserverHost, keyserverPath,jobTempDir, backupName);
 		executorPool.execute(backupJobWorker);
 	}
 	
