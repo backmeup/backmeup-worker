@@ -131,7 +131,7 @@ public class WorkerCore {
 	}
 	
 	public int getNoOfFailedJobs() {
-		throw new UnsupportedOperationException();
+		return noOfFaildJobs.get();
 	}
 	
 	// Public Methods ---------------------------------------------------------
@@ -209,6 +209,7 @@ public class WorkerCore {
 	
 	private void jobThreadBeforeExecute(Thread t, Runnable r) {
 		this.noOfRunningJobs.getAndIncrement();
+		setCurrentState(WorkerState.Busy);
 	}
 	
 	private void jobThreadAterExecute(Runnable r, Throwable t) {
@@ -217,12 +218,15 @@ public class WorkerCore {
 		}
 		
 		this.noOfRunningJobs.getAndDecrement();
+		if (noOfRunningJobs.get() == 0) {
+			setCurrentState(WorkerState.Idle);
+		}
 		jobReceiver.setPaused(false);
 	}
 	
 	// Nested classes and enums -----------------------------------------------
 	
-	private enum WorkerState {
+	public enum WorkerState {
 		Offline, // Not connected to dependent services
 		Idle,    // No jobs to execute
 		Busy    // Jobs are currently running on worker
