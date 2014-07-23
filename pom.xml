@@ -15,7 +15,7 @@
 	<name>Backmeup Worker</name>
 	<url>http://backmeup.at/</url>
 	<description>
-		The Backemup Worker executes the backup jobs.
+		The Backemup Worker executes backup jobs.
 	</description>
 
 	<properties>
@@ -27,11 +27,8 @@
 		<java.compiler.target>1.7</java.compiler.target>
 
 		<!-- Configuration -->
-		<config.localBuildArtefactDirectory>../autodeploy</config.localBuildArtefactDirectory>
-		<config.integrationTestCategory>org.backmeup.tests.IntegrationTest</config.integrationTestCategory>
-
 		<config.tomcat.manager.url>http://127.0.0.1:8080/manager/text</config.tomcat.manager.url>
-		<config.tomcat.authentication.id>backmeup.service.tomcat</config.tomcat.authentication.id>
+		<config.tomcat.authentication.id>backmeup.worker.tomcat</config.tomcat.authentication.id>
 
 		<!-- Dependency versions
 			 Please keep alphabetical
@@ -41,6 +38,7 @@
 		<version.ch.qos.logback>1.1.2</version.ch.qos.logback>
 		<version.com.rabbitmq>2.8.6</version.com.rabbitmq>
 		<version.com.miglayout>3.7.4</version.com.miglayout>
+		<version.javax.servlet>3.0.1</version.javax.servlet>
 		<version.junit>4.11</version.junit>
 		<version.org.apache.felix>4.0.2</version.org.apache.felix>
 		<version.org.apache.httpcomponents>4.3.4</version.org.apache.httpcomponents>
