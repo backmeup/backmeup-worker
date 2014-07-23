@@ -59,6 +59,7 @@
 		<module>backmeup-worker-core</module>
 		<module>backmeup-worker-app-console</module>
 		<module>backmeup-worker-app-gui</module>
+		<module>backmeup-worker-app-servlet</module>
 	</modules>
 
 	<build>
