@@ -97,6 +97,17 @@ public class WorkerFrame extends JFrame {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
+//					if (System.getProperty("os.name").startsWith("Windows")) {
+//					    System.setProperty("swing.defaultlaf",
+//					                       "com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
+//					} else if (System.getProperty("os.name").startsWith("Linux")) {
+//					    System.setProperty("swing.defaultlaf",
+//					                       "com.sun.java.swing.plaf.gtk.GTKLookAndFeel");
+//					} else { //Assume OS X
+//					    System.setProperty("swing.defaultlaf",
+//					                       "com.sun.java.swing.plaf.mac.MacLookAndFeel");
+//					}
+					
 					WorkerFrame frame = new WorkerFrame();
 					frame.setVisible(true);
 				} catch (Exception e) {
