@@ -1,6 +1,5 @@
 package org.backmeup.worker.job;
 
-import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -11,25 +10,15 @@ import java.util.ResourceBundle;
 
 import org.backmeup.keyserver.client.KeyserverFacade;
 import org.backmeup.keyserver.model.AuthDataResult;
-import org.backmeup.model.StatusCategory;
-import org.backmeup.model.StatusType;
 import org.backmeup.model.Token;
-import org.backmeup.model.constants.BackupJobStatus;
 import org.backmeup.model.dto.BackupJobDTO;
 import org.backmeup.model.dto.BackupJobDTO.JobStatus;
 import org.backmeup.model.dto.JobProtocolDTO;
 import org.backmeup.model.dto.PluginProfileDTO;
-import org.backmeup.model.spi.ActionDescribable;
+import org.backmeup.model.spi.PluginDescribable;
 import org.backmeup.plugin.Plugin;
-import org.backmeup.plugin.api.actions.Action;
-import org.backmeup.plugin.api.actions.ActionException;
-/*
-import org.backmeup.plugin.api.actions.encryption.EncryptionAction;
-import org.backmeup.plugin.api.actions.filesplitting.FilesplittAction;
-import org.backmeup.plugin.api.actions.indexing.IndexAction;
-import org.backmeup.plugin.api.actions.indexing.IndexDescribable;
-import org.backmeup.plugin.api.actions.thumbnail.ThumbnailAction;
-*/
+import org.backmeup.plugin.api.connectors.Action;
+import org.backmeup.plugin.api.connectors.ActionException;
 import org.backmeup.plugin.api.connectors.Datasink;
 import org.backmeup.plugin.api.connectors.Datasource;
 import org.backmeup.plugin.api.connectors.DatasourceException;
@@ -215,7 +204,7 @@ public class BackupJobRunner {
 
 			if (doIndexing && indexer == null) {
 				// if we need to index, add the indexer to the requested actions
-				ActionDescribable ad = plugins.getActionById("org.backmeup.indexer");
+				PluginDescribable ad = plugins.getPluginDescribableById("org.backmeup.indexer");
 				PluginProfileDTO indexActionProfile = new PluginProfileDTO();
 				indexActionProfile.setPluginId(ad.getId());
 				indexActionProfile.setConfigProperties(new HashMap<String, String>());
@@ -232,8 +221,8 @@ public class BackupJobRunner {
 				try {
 					if ("org.backmeup.filesplitting".equals(actionId)) {
 						// If we do encryption, the Filesplitter needs to run before!
-						action = ((PluginImpl)plugins).getAction(actionId);
-						//							action.doAction(params, storage, persistentJob, new JobStatusProgressor(persistentJob, "filesplittaction"));
+						action = plugins.getAction(actionId);
+//						action.doAction(params, storage, persistentJob, new JobStatusProgressor(persistentJob, "filesplittaction"));
 					} else if ("org.backmeup.encryption".equals(actionId)) {
 						// Add the encryption password to the parameters
 						if (authenticationData.getEncryptionPwd() != null) {
@@ -241,8 +230,8 @@ public class BackupJobRunner {
 						}
 
 						// After splitting, run encryption
-						action = ((PluginImpl)plugins).getAction(actionId);
-						//							action.doAction(params, storage, persistentJob,	new JobStatusProgressor(persistentJob, "encryptionaction"));
+						action = plugins.getAction(actionId);
+//						action.doAction(params, storage, persistentJob,	new JobStatusProgressor(persistentJob, "encryptionaction"));
 					} else if ("org.backmeup.indexer".equals(actionId)) {
 						// Do nothing - we ignore index action declaration in the job description and use
 						// the info from the user properties instead
@@ -347,14 +336,14 @@ public class BackupJobRunner {
 
 	private void doIndexing(Properties params, Storage storage, BackupJobDTO job, Client client) throws ActionException {
 		// If we do indexing, the Thumbnail renderer needs to run before!
-		Action thumbnailAction = ((PluginImpl)plugins).getAction("org.backmeup.thumbnail");
+		Action thumbnailAction = plugins.getAction("org.backmeup.thumbnail");
 //		thumbnailAction.doAction(params, storage, job, new JobStatusProgressor(job, "thumbnailAction"));
 
 		// After thumbnail rendering, run indexing
 		Settings settings = ImmutableSettings.settingsBuilder().put("cluster.name", indexName).build();
 		client = new TransportClient(settings).addTransportAddress(new InetSocketTransportAddress(indexHost, indexPort));
 
-		Action indexAction = ((PluginImpl)plugins).getAction("org.backmeup.indexing");
+		Action indexAction = plugins.getAction("org.backmeup.indexing");
 //		indexAction.doAction(params, storage, job, new JobStatusProgressor(job,	"indexaction"));
 		client.close();
 	}
