@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Backmeup-Worker</title>
+        <script src="http://code.jquery.com/jquery-latest.min.js"></script>
+        <script>
+        function refreshContainer(){
+            console.log("request");
+    		$.get('worker', function(responseJson) {
+            	$container = $('somediv');
+            	$container.empty();
+            	var $ul = $('<ul>').appendTo($container);
+                $.each(responseJson, function(index, item) {
+                    $('<li>').text(item).appendTo($ul);
+                });         
+            });
+    	}
+    	
+        $(document).ready(function() {
+            $('#somebutton').click(refreshContainer);
+            
+            setInterval(refreshContainer, 3000);
+
+        });
+        </script>
+    </head>
+    <body>
+        <button id="somebutton">press here</button>
+        <div id="somediv"></div>
+    </body>
+</html>
