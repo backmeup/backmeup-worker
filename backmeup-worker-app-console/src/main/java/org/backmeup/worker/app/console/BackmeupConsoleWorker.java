@@ -7,32 +7,34 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class BackmeupConsoleWorker {
-	private static final Logger logger = LoggerFactory.getLogger(BackmeupConsoleWorker.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(BackmeupConsoleWorker.class);
+	
+	private BackmeupConsoleWorker() {
+		
+	}
 
 	public static void main(String[] args) {
-		logger.info("Starting backmeup worker core");
-		System.out.println("Starting backmeup worker");
+		LOGGER.info("Starting backmeup worker core");
 		WorkerCore worker = new WorkerCore();
 		
-		logger.info("Initializing worker");
+		LOGGER.info("Initializing worker");
 		worker.initialize();
-		logger.info("Initializing worker done.");
+		LOGGER.info("Initializing worker done.");
 		
-		logger.info("Starting worker");
+		LOGGER.info("Starting worker");
 		worker.start();
-		logger.info("Starting worker done.");
+		LOGGER.info("Starting worker done.");
 		
-		logger.info("Backmeup worker core startet");
-		System.out.println("Startup completed");
-		System.out.println("Press any key to quit");
+		LOGGER.info("Backmeup worker core startet");
+		LOGGER.info("Press any key to quit");
 		try {
 			System.in.read();
 		} catch (IOException e) {
-			logger.error("", e);
+			LOGGER.error("", e);
 		}
 		
-		logger.info("Shutting down backmeup worker core");
+		LOGGER.info("Shutting down backmeup worker core");
 		worker.shutdown();
-		logger.info("Shutdown complete");
+		LOGGER.info("Shutdown complete");
 	}
 }
