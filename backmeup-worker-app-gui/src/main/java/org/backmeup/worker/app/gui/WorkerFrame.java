@@ -39,7 +39,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
 public class WorkerFrame extends JFrame {
-	private static final Logger logger = LoggerFactory.getLogger(WorkerFrame.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(WorkerFrame.class);
 	
 	private static final long serialVersionUID = 1L;
 	private static final int TAB_CONFIG = 2;
@@ -111,7 +111,7 @@ public class WorkerFrame extends JFrame {
 					WorkerFrame frame = new WorkerFrame();
 					frame.setVisible(true);
 				} catch (Exception e) {
-					e.printStackTrace();
+					LOGGER.error("", e);
 				}
 			}
 		});
@@ -264,7 +264,6 @@ public class WorkerFrame extends JFrame {
 	private void intializeLogger() {
 		LogTextAppender logAppender = new LogTextAppender(txtLogs);
 		logAppender.start();
-		
 	}
 
 	private void startWorker() {
@@ -272,17 +271,17 @@ public class WorkerFrame extends JFrame {
 			new SwingWorker<Void, Void>() {
 				@Override
 				protected Void doInBackground() throws Exception {
-					logger.info("Starting backmeup worker core");
+					LOGGER.info("Starting backmeup worker core");
 
-					logger.info("Initializing worker");
+					LOGGER.info("Initializing worker");
 					workerCore.initialize();
-					logger.info("Initializing worker done.");
+					LOGGER.info("Initializing worker done.");
 
-					logger.info("Starting worker");
+					LOGGER.info("Starting worker");
 					workerCore.start();
-					logger.info("Starting worker done.");
+					LOGGER.info("Starting worker done.");
 
-					logger.info("Backmeup worker core startet");
+					LOGGER.info("Backmeup worker core startet");
 					return null;
 				}
 
@@ -294,7 +293,6 @@ public class WorkerFrame extends JFrame {
 		if(workerCore != null) {
 			workerCore.shutdown();
 		}
-		
 	}
 
 	private void tabChanged(ChangeEvent e) {
@@ -308,7 +306,6 @@ public class WorkerFrame extends JFrame {
 						Properties workerProperties = new Properties();
 						ClassLoader loader = Thread.currentThread().getContextClassLoader();
 						workerProperties.load(loader.getResourceAsStream("backmeup-worker.properties"));
-
 
 						StringBuilder sb = new StringBuilder();
 						SortedSet<String> configLines = new TreeSet<>();
@@ -327,7 +324,6 @@ public class WorkerFrame extends JFrame {
 						
 						publish(sb.toString());
 						return null;
-						
 					}
 	    			 
 	                @Override
@@ -390,5 +386,4 @@ public class WorkerFrame extends JFrame {
 		bmFailedJobs.setMaximum(maxValue);
 		bmFailedJobs.setValue(noOfFailedJobs);
 	}
-
 }
