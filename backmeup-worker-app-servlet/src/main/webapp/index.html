@@ -7,25 +7,18 @@
         function refreshContainer(){
             console.log("request");
     		$.get('worker', function(responseJson) {
-            	$container = $('somediv');
-            	$container.empty();
-            	var $ul = $('<ul>').appendTo($container);
-                $.each(responseJson, function(index, item) {
-                    $('<li>').text(item).appendTo($ul);
-                });         
+                document.getElementById("workerstatus").innerHTML = JSON.stringify(responseJson, undefined, 2);
             });
     	}
     	
         $(document).ready(function() {
-            $('#somebutton').click(refreshContainer);
-            
             setInterval(refreshContainer, 3000);
-
         });
         </script>
     </head>
     <body>
-        <button id="somebutton">press here</button>
-        <div id="somediv"></div>
+    	<h1>Backmeup-Worker</h1>
+    	<h2>Status Monitor</h2>
+        <pre id="workerstatus"></pre>
     </body>
 </html>
