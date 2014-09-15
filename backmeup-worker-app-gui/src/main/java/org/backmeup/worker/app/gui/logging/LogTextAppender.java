@@ -15,7 +15,7 @@ import ch.qos.logback.core.encoder.EchoEncoder;
 import ch.qos.logback.core.encoder.Encoder;
 
 public class LogTextAppender extends AppenderBase<ILoggingEvent> {
-	private Encoder<ILoggingEvent> encoder = new EchoEncoder<ILoggingEvent>();
+	private Encoder<ILoggingEvent> encoder = new EchoEncoder<>();
 	private ByteArrayOutputStream out = new ByteArrayOutputStream();
 	
 	private JTextArea jTextArea;
@@ -45,7 +45,8 @@ public class LogTextAppender extends AppenderBase<ILoggingEvent> {
 			final String line = out.toString(); 
 			
 			SwingUtilities.invokeLater(new Runnable() {
-				     public void run() {
+				     @Override
+                    public void run() {
 				          if (jTextArea != null) {
 				             jTextArea.append(line);
 				         }

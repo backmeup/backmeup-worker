@@ -19,6 +19,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
+import javax.swing.SwingConstants;
 import javax.swing.SwingWorker;
 import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
@@ -95,7 +96,8 @@ public class WorkerFrame extends JFrame {
 	 */
 	public static void main(String[] args) {
 		EventQueue.invokeLater(new Runnable() {
-			public void run() {
+			@Override
+            public void run() {
 				try {
 //					if (System.getProperty("os.name").startsWith("Windows")) {
 //					    System.setProperty("swing.defaultlaf",
@@ -129,7 +131,8 @@ public class WorkerFrame extends JFrame {
 		});
 		setTitle("Backmeup Worker");
 		timer.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
+			@Override
+            public void actionPerformed(ActionEvent arg0) {
 				timerElapsed(arg0);
 			}
 		});
@@ -141,9 +144,10 @@ public class WorkerFrame extends JFrame {
 		contentPane.setLayout(new BorderLayout(0, 0));
 		setContentPane(contentPane);
 		
-		tabbedPane = new JTabbedPane(JTabbedPane.TOP);
+		tabbedPane = new JTabbedPane(SwingConstants.TOP);
 		tabbedPane.addChangeListener(new ChangeListener() {
-			public void stateChanged(ChangeEvent e) {
+			@Override
+            public void stateChanged(ChangeEvent e) {
 				tabChanged(e);
 			}
 		});
@@ -270,7 +274,7 @@ public class WorkerFrame extends JFrame {
 		if (!workerInitialized) {
 			new SwingWorker<Void, Void>() {
 				@Override
-				protected Void doInBackground() throws Exception {
+				protected Void doInBackground() {
 					LOGGER.info("Starting backmeup worker core");
 
 					LOGGER.info("Initializing worker");
