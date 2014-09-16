@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Backmeup-Worker</title>
+        <script src="http://code.jquery.com/jquery-latest.min.js"></script>
+        <script>
+        function refreshContainer(){
+            console.log("request");
+    		$.get('worker', function(responseJson) {
+                document.getElementById("workerstatus").innerHTML = JSON.stringify(responseJson, undefined, 2);
+            });
+    	}
+    	
+        $(document).ready(function() {
+            setInterval(refreshContainer, 3000);
+        });
+        </script>
+    </head>
+    <body>
+    	<h1>Backmeup-Worker</h1>
+    	<h2>Status Monitor</h2>
+        <pre id="workerstatus"></pre>
+    </body>
+</html>

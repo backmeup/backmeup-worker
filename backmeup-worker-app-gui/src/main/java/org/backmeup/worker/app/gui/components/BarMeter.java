@@ -81,7 +81,8 @@ public class BarMeter extends JComponent {
 		return this.borderColor;
 	}
 
-	public void paintComponent(Graphics g) {
+	@Override
+    public void paintComponent(Graphics g) {
 		Graphics2D g2 = (Graphics2D) g;
 		paintBar(g2, (double) value / (max - min), borderColor, foreColor, backColor);
 	}

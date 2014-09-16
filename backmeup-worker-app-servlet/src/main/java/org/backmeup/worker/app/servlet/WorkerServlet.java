@@ -3,7 +3,6 @@ package org.backmeup.worker.app.servlet;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -25,7 +24,8 @@ public class WorkerServlet extends HttpServlet {
     	worker = new WorkerCore();
     }
     
-    public void init() throws ServletException {
+    @Override
+    public void init() {
     	logger.info("Initializing worker");
 		worker.initialize();
 		logger.info("Initializing worker done.");
@@ -35,7 +35,8 @@ public class WorkerServlet extends HttpServlet {
 		logger.info("Starting worker done.");
     }
     
-	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+	@Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
 		WorkerData workerData = new WorkerData();
 		workerData.setWorkerState(worker.getCurrentState());
 		workerData.setNoOfCurrentJobs(worker.getNoOfCurrentJobs());
@@ -60,7 +61,8 @@ public class WorkerServlet extends HttpServlet {
         mapper.writeValue(out, workerData);
 	}
 	
-	public void destroy() {
+	@Override
+    public void destroy() {
 		logger.info("Shutting down backmeup worker core");
 		worker.shutdown();
 		logger.info("Shutdown complete");
