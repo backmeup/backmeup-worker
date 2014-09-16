@@ -11,7 +11,12 @@ public final class Configuration {
 	static {
 		try {
 			ClassLoader loader = Thread.currentThread().getContextClassLoader();
-			properties.load(loader.getResourceAsStream(PROPERTYFILE));
+			if (loader.getResourceAsStream(PROPERTYFILE) != null) {
+				properties.load(loader.getResourceAsStream(PROPERTYFILE));
+			} else {
+				throw new IOException("unable to load properties file: "
+						+ PROPERTYFILE);
+			}
 		} catch (IOException e) {
 			throw new ExceptionInInitializerError(e);
 		}
