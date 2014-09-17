@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  */
 @SuppressWarnings(value = { "all" })
 public class BackupJobRunner {
-	private final Logger logger = LoggerFactory.getLogger(BackupJobRunner.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(BackupJobRunner.class);
 
 	private static final String ERROR_EMAIL_TEXT = "ERROR_EMAIL_TEXT";
 	private static final String ERROR_EMAIL_SUBJECT = "ERROR_EMAIL_SUBJECT";
@@ -116,7 +116,7 @@ public class BackupJobRunner {
 //			deleteOldStatus(persistentJob);
 			
 //			addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.STARTED, StatusCategory.INFO, new Date().getTime()));
-			logger.info("Job " + backupJob.getJobId() + " startet");
+			LOGGER.info("Job " + backupJob.getJobId() + " startet");
 			
 			long previousSize = 0;
 
@@ -135,7 +135,7 @@ public class BackupJobRunner {
 			}
 
 //			addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOADING, StatusCategory.INFO, new Date().getTime()));
-			logger.info("Job " + backupJob.getJobId() + " downloading");
+			LOGGER.info("Job " + backupJob.getJobId() + " downloading");
 			
 			// Download from source
 			try {
@@ -143,11 +143,11 @@ public class BackupJobRunner {
 			} catch (StorageException e) {
 //				logger.error("", e);
 //				errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOAD_FAILED, StatusCategory.WARNING, new Date().getTime(), e.getMessage())));
-				logger.warn("Job " + backupJob.getJobId() + " faild with message: " + e);
+				LOGGER.warn("Job " + backupJob.getJobId() + " faild with message: " + e);
 			} catch (DatasourceException e) {
 //				logger.error("", e);
 //				errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOAD_FAILED, StatusCategory.WARNING, new Date().getTime(), e.getMessage())));
-				logger.warn("Job " + backupJob.getJobId() + " faild with message: " + e);
+				LOGGER.warn("Job " + backupJob.getJobId() + " faild with message: " + e);
 			}
 
 			// for each datasource add an entry with bytes it consumed
@@ -163,7 +163,7 @@ public class BackupJobRunner {
 
 			// Execute Actions in sequence
 //			addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.PROCESSING, StatusCategory.INFO, new Date().getTime()));
-			logger.info("Job " + backupJob.getJobId() + " processing");
+			LOGGER.info("Job " + backupJob.getJobId() + " processing");
 			
 			// if no actions are specified for this backup job,
 			// initialize field with empty list
@@ -216,8 +216,6 @@ public class BackupJobRunner {
 			for (PluginProfileDTO actionProfile : backupJob.getActions()) {
 				String actionId = actionProfile.getPluginId();
 				Action action;
-				Client client = null;
-
 				try {
 					if ("org.backmeup.filesplitting".equals(actionId)) {
 						// If we do encryption, the Filesplitter needs to run before!
@@ -236,23 +234,21 @@ public class BackupJobRunner {
 						// Do nothing - we ignore index action declaration in the job description and use
 						// the info from the user properties instead
 						if (doIndexing) {
-							doIndexing(params, storage, backupJob, client);
+							doIndexing(params, storage, backupJob);
 						}
 
 					} else {
 						// Only happens in case Job was corrupted in the core - we'll handle that as a fatal error
 //						errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), "Unsupported Action: " + actionId)));
-						logger.error("Job " + backupJob.getJobId() + " faild with unsupported action: " + actionId);
+						LOGGER.error("Job " + backupJob.getJobId() + " faild with unsupported action: " + actionId);
 					}
 				} catch (ActionException e) {
 					// Should only happen in case of problems in the backmeup-service (file I/O, DB access, etc.)
 					// We'll handle that as a fatal error
 //					errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
-					logger.error("Job " + backupJob.getJobId() + " faild with message: " + e);
+					LOGGER.error("Job " + backupJob.getJobId() + " faild with message: " + e);
 				} finally {
-					if (client != null) {
-						client.close(); 
-					}
+
 				}
 			}
 
@@ -260,18 +256,18 @@ public class BackupJobRunner {
 			try {
 				// Upload to Sink
 //				addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.UPLOADING, StatusCategory.INFO, new Date().getTime()));
-				logger.info("Job " + backupJob.getJobId() + " uploading");
+				LOGGER.info("Job " + backupJob.getJobId() + " uploading");
 
 				sinkProperties.setProperty("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
 				sinkProperties.setProperty("org.backmeup.userid", backupJob.getUser().getUserId() + "");
 				sink.upload(sinkProperties, storage, new JobStatusProgressor(backupJob, "datasink"));
 
 //				addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.SUCCESSFUL, StatusCategory.INFO, new Date().getTime()));
-				logger.info("Job " + backupJob.getJobId() + " successful");
+				LOGGER.info("Job " + backupJob.getJobId() + " successful");
 			} catch (StorageException e) {
 //				logger.error("", e);
 //				errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
-				logger.error("Job " + backupJob.getJobId() + " faild with message: " + e);
+				LOGGER.error("Job " + backupJob.getJobId() + " faild with message: " + e);
 			}
 
 			// store job protocol within database
@@ -298,13 +294,13 @@ public class BackupJobRunner {
 //			storeJobProtocol(backupJob, protocol, 0, false);
 			
 //			errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
-			logger.error("Job " + backupJob.getJobId() + " faild with message: " + e);	
+			LOGGER.error("Job " + backupJob.getJobId() + " faild with message: " + e);	
 			
 			int processedItems = 0;
 			try {
 				processedItems = storage.getDataObjectCount();
 			} catch (StorageException e1) {
-				logger.error("", e);	
+				LOGGER.error("", e);	
 			}
 			
 			JobProtocolDTO protocol = new JobProtocolDTO();
@@ -334,14 +330,14 @@ public class BackupJobRunner {
 		bmuService.updateBackupJob(backupJob);
 	}
 
-	private void doIndexing(Properties params, Storage storage, BackupJobDTO job, Client client) throws ActionException {
+	private void doIndexing(Properties params, Storage storage, BackupJobDTO job) throws ActionException {
 		// If we do indexing, the Thumbnail renderer needs to run before!
 		Action thumbnailAction = plugins.getAction("org.backmeup.thumbnail");
 //		thumbnailAction.doAction(params, storage, job, new JobStatusProgressor(job, "thumbnailAction"));
 
 		// After thumbnail rendering, run indexing
 		Settings settings = ImmutableSettings.settingsBuilder().put("cluster.name", indexName).build();
-		client = new TransportClient(settings).addTransportAddress(new InetSocketTransportAddress(indexHost, indexPort));
+		Client client = new TransportClient(settings).addTransportAddress(new InetSocketTransportAddress(indexHost, indexPort));
 
 		Action indexAction = plugins.getAction("org.backmeup.indexing");
 //		indexAction.doAction(params, storage, job, new JobStatusProgressor(job,	"indexaction"));
@@ -415,7 +411,7 @@ public class BackupJobRunner {
 		@Override
 		public void progress(String message) {
 //			addStatusToDb(new JobStatus(job.getJobId(), "info", category, new Date().getTime(),  message));
-			logger.info("Job {} [{}] {}", job.getJobId(), category, message);
+			LOGGER.info("Job {} [{}] {}", job.getJobId(), category, message);
 		}
 	}
 }

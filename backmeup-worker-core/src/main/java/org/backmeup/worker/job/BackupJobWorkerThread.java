@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class BackupJobWorkerThread implements Runnable {
-	private final Logger logger = LoggerFactory.getLogger(BackupJobWorkerThread.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(BackupJobWorkerThread.class);
 	
 	private final BackupJob backupJob;
 	private final String backupName;
@@ -64,7 +64,7 @@ public class BackupJobWorkerThread implements Runnable {
 			Storage storage = ((PluginImpl)plugins).service(Storage.class, "(name=" + "org.backmeup.localfilesystemstorage" + ")");
 			runner.executeBackup(backupJob.getId(), storage);
 		} catch (Exception e) {
-			logger.error("Failed to process job", e);
+			LOGGER.error("Failed to process job", e);
 		}
 	}
 }

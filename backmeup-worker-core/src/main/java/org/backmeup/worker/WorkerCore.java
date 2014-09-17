@@ -22,7 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class WorkerCore {
-	private final Logger logger = LoggerFactory.getLogger(WorkerCore.class);
+	private final Logger LOGGER = LoggerFactory.getLogger(WorkerCore.class);
 	
 	private Boolean initialized;
 	private WorkerState currentState;
@@ -137,7 +137,7 @@ public class WorkerCore {
 	// Public Methods ---------------------------------------------------------
 	
 	public void initialize() {
-		logger.info("Initializing backmeup-worker");
+		LOGGER.info("Initializing backmeup-worker");
 		boolean errorsDuringInit = false;
 		
 		executorPool.addThreadPoolListener(new ThreadPoolListener() {

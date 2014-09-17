@@ -14,8 +14,7 @@ public final class Configuration {
 			if (loader.getResourceAsStream(PROPERTYFILE) != null) {
 				properties.load(loader.getResourceAsStream(PROPERTYFILE));
 			} else {
-				throw new IOException("unable to load properties file: "
-						+ PROPERTYFILE);
+				throw new IOException("unable to load properties file: " + PROPERTYFILE);
 			}
 		} catch (IOException e) {
 			throw new ExceptionInInitializerError(e);
@@ -23,12 +22,12 @@ public final class Configuration {
 	}
 
 	public static String getProperty(String key) {
-		return properties.getProperty(key);	
+		return properties.getProperty(key);
 	}
 	
 	public static String getProperty(String key, String defaultValue) {
 		String value = getProperty(key);
-		if(value != null) {
+		if (value != null) {
 			return value;
 		} else {
 			return defaultValue;

@@ -20,8 +20,7 @@ public class AuthDataResult {
 		if (authInformation == null) {
 			this.authinfos = new AuthData[0];
 		} else {
-			this.authinfos = Arrays.copyOf(authInformation,
-					authInformation.length);
+			this.authinfos = Arrays.copyOf(authInformation, authInformation.length);
 		}
 	}
 

@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 public class BackmeupServiceClient implements BackmeupServiceFacade {
 	private static final int DEFAULT_PORT = 80;
 
-	private final Logger logger = LoggerFactory.getLogger(BackmeupServiceClient.class);
+	private final Logger LOGGER = LoggerFactory.getLogger(BackmeupServiceClient.class);
 
 	private final String scheme;
 
@@ -67,13 +67,13 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 		if (r.response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
 			throw new BackMeUpException("Failed to retrieve BackupJob: " + r.content);
 		}
-		logger.debug("getBackupJob: " + r.content);
+		LOGGER.debug("getBackupJob: " + r.content);
 		
 		try {
 			ObjectMapper mapper = createJsonMapper();
 			return mapper.readValue(r.content, BackupJobDTO.class);
 		}  catch (IOException e) {
-			logger.error("", e);
+			LOGGER.error("", e);
 			throw new BackMeUpException("Failed to retrieve BackupJob: " + e);
 		}
 	}
@@ -89,11 +89,11 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 				throw new BackMeUpException("Failed to update BackupJob: " + r.content);
 			}
 
-			logger.debug("saveBackupJob: " + r.content);
+			LOGGER.debug("saveBackupJob: " + r.content);
 			return mapper.readValue(r.content, BackupJobDTO.class);
 
 		} catch (IOException e) {
-			logger.error("", e);
+			LOGGER.error("", e);
 			throw new BackMeUpException("Failed to update BackupJob: " + e);
 		}
 	}
@@ -116,7 +116,7 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 			try {
 				rPort = Integer.parseInt(sp[1]);
 			} catch (Exception ex) {
-				logger.error("", ex);
+				LOGGER.error("", ex);
 			}
 		}
 
@@ -175,7 +175,7 @@ public class BackmeupServiceClient implements BackmeupServiceFacade {
 				try {
 					r.content = new Scanner(response.getEntity().getContent()).useDelimiter("\\A").next();
 				} catch (NoSuchElementException nee) {
-					logger.debug("", nee);
+					LOGGER.debug("", nee);
 				}
 			}
 			return r;
