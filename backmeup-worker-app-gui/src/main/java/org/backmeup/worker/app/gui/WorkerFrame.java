@@ -99,16 +99,16 @@ public class WorkerFrame extends JFrame {
 			@Override
             public void run() {
 				try {
-//					if (System.getProperty("os.name").startsWith("Windows")) {
-//					    System.setProperty("swing.defaultlaf",
-//					                       "com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
-//					} else if (System.getProperty("os.name").startsWith("Linux")) {
-//					    System.setProperty("swing.defaultlaf",
-//					                       "com.sun.java.swing.plaf.gtk.GTKLookAndFeel");
-//					} else { //Assume OS X
-//					    System.setProperty("swing.defaultlaf",
-//					                       "com.sun.java.swing.plaf.mac.MacLookAndFeel");
-//					}
+					if (System.getProperty("os.name").startsWith("Windows")) {
+					    System.setProperty("swing.defaultlaf",
+					                       "com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
+					} else if (System.getProperty("os.name").startsWith("Linux")) {
+					    System.setProperty("swing.defaultlaf",
+					                       "com.sun.java.swing.plaf.gtk.GTKLookAndFeel");
+					} else { //Assume OS X
+					    System.setProperty("swing.defaultlaf",
+					                       "com.sun.java.swing.plaf.mac.MacLookAndFeel");
+					}
 					
 					WorkerFrame frame = new WorkerFrame();
 					frame.setVisible(true);
@@ -132,8 +132,8 @@ public class WorkerFrame extends JFrame {
 		setTitle("Backmeup Worker");
 		timer.addActionListener(new ActionListener() {
 			@Override
-            public void actionPerformed(ActionEvent arg0) {
-				timerElapsed(arg0);
+            public void actionPerformed(ActionEvent event) {
+				timerElapsed(event);
 			}
 		});
 		timer.setDelay(1000);
@@ -147,8 +147,8 @@ public class WorkerFrame extends JFrame {
 		tabbedPane = new JTabbedPane(SwingConstants.TOP);
 		tabbedPane.addChangeListener(new ChangeListener() {
 			@Override
-            public void stateChanged(ChangeEvent e) {
-				tabChanged(e);
+            public void stateChanged(ChangeEvent event) {
+				tabChanged(event);
 			}
 		});
 		contentPane.add(tabbedPane, BorderLayout.CENTER);
@@ -342,7 +342,7 @@ public class WorkerFrame extends JFrame {
 		
 	}
 	
-	private void timerElapsed(ActionEvent ae) {
+	private void timerElapsed(ActionEvent event) {
 		EventQueue.invokeLater(new Runnable() {
 			
 			@Override
