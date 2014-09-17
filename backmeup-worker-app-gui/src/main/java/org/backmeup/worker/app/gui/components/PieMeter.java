@@ -10,7 +10,7 @@ import javax.swing.JComponent;
 
 @SuppressWarnings("serial")
 public class PieMeter extends JComponent {
-	protected static final int strokeWidth = 1;
+	protected static final int STROKE_WIDTH = 1;
 
 	private int min = 0;
 	private int max = 100;
@@ -19,7 +19,7 @@ public class PieMeter extends JComponent {
 	private Color foreColor = Color.red;
 	private Color borderColor = Color.blue;
 	
-	private Stroke stroke = new BasicStroke(strokeWidth);
+	private Stroke stroke = new BasicStroke(STROKE_WIDTH);
 
 	public PieMeter() {
 		
@@ -89,17 +89,17 @@ public class PieMeter extends JComponent {
 
 	private void paintDisc(Graphics2D g, double percFilled, Color borderColor, Color foreColor, Color backColor) {
 		if (percFilled >= 0 && percFilled <= 1) {
-			int w = this.getWidth() - strokeWidth;
-			int h = this.getHeight() - strokeWidth;
+			int w = this.getWidth() - STROKE_WIDTH;
+			int h = this.getHeight() - STROKE_WIDTH;
 			int theta = (int) (360 * percFilled + 0.5);
 
 			g.setStroke(stroke);
 			g.setColor(backColor);
-			g.fillOval(strokeWidth / 2, strokeWidth / 2, w, h);
+			g.fillOval(STROKE_WIDTH / 2, STROKE_WIDTH / 2, w, h);
 			g.setColor(foreColor);
-			g.fillArc(strokeWidth / 2, strokeWidth / 2, w, h, 90, -theta);
+			g.fillArc(STROKE_WIDTH / 2, STROKE_WIDTH / 2, w, h, 90, -theta);
 			g.setColor(borderColor);
-			g.drawOval(strokeWidth / 2, strokeWidth / 2, w, h);
+			g.drawOval(STROKE_WIDTH / 2, STROKE_WIDTH / 2, w, h);
 		}
 	}
 }

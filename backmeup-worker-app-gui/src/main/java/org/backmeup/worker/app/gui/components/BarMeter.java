@@ -10,7 +10,7 @@ import javax.swing.JComponent;
 
 @SuppressWarnings("serial")
 public class BarMeter extends JComponent {
-	protected static final int strokeWidth = 1;
+	protected static final int STROKE_WIDTH = 1;
 
 	private int min = 0;
 	private int max = 100;
@@ -19,7 +19,7 @@ public class BarMeter extends JComponent {
 	private Color foreColor = Color.red;
 	private Color borderColor = Color.blue;
 	
-	private Stroke stroke = new BasicStroke(strokeWidth);
+	private Stroke stroke = new BasicStroke(STROKE_WIDTH);
 
 	public BarMeter() {
 		
@@ -89,17 +89,17 @@ public class BarMeter extends JComponent {
 
 	private void paintBar(Graphics2D g, double percFilled, Color borderColor, Color foreColor, Color backColor) {
 		if (percFilled >= 0 && percFilled <= 1) {
-			int w = this.getWidth() - strokeWidth;
-			int h = this.getHeight() - strokeWidth;
+			int w = this.getWidth() - STROKE_WIDTH;
+			int h = this.getHeight() - STROKE_WIDTH;
 			int val = (int) (w * percFilled);
 
 			g.setStroke(stroke);
 			g.setColor(backColor);
-			g.fillRect(strokeWidth / 2, strokeWidth / 2, w, h);
+			g.fillRect(STROKE_WIDTH / 2, STROKE_WIDTH / 2, w, h);
 			g.setColor(foreColor);
-			g.fillRect(strokeWidth / 2, strokeWidth / 2, val, h);
+			g.fillRect(STROKE_WIDTH / 2, STROKE_WIDTH / 2, val, h);
 			g.setColor(borderColor);
-			g.drawRect(strokeWidth / 2, strokeWidth / 2, w, h);
+			g.drawRect(STROKE_WIDTH / 2, STROKE_WIDTH / 2, w, h);
 		}
 	}
 }

@@ -54,6 +54,7 @@ public class LogTextAppender extends AppenderBase<ILoggingEvent> {
 				 });
 			out.reset();
 		} catch (IOException e) {
+			throw new RuntimeException(e);
 		}
 	}
 }
