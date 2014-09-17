@@ -4,8 +4,8 @@ import org.backmeup.worker.WorkerCore.WorkerState;
 
 public class WorkerData {
 	private WorkerState workerState;
-	private int NoOfCurrentJobs;
-	private int NoOfMaximumJobs;
+	private int noOfCurrentJobs;
+	private int noOfMaximumJobs;
 	private int noOfFetchedJobs;
 	private int noOfFinishedJobs;
 	private int noOfFailedJobs;
@@ -23,19 +23,19 @@ public class WorkerData {
 	}
 
 	public int getNoOfCurrentJobs() {
-		return NoOfCurrentJobs;
+		return noOfCurrentJobs;
 	}
 
 	public void setNoOfCurrentJobs(int noOfCurrentJobs) {
-		NoOfCurrentJobs = noOfCurrentJobs;
+		this.noOfCurrentJobs = noOfCurrentJobs;
 	}
 
 	public int getNoOfMaximumJobs() {
-		return NoOfMaximumJobs;
+		return noOfMaximumJobs;
 	}
 
 	public void setNoOfMaximumJobs(int noOfMaximumJobs) {
-		NoOfMaximumJobs = noOfMaximumJobs;
+		this.noOfMaximumJobs = noOfMaximumJobs;
 	}
 
 	public int getNoOfFetchedJobs() {

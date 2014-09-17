@@ -15,24 +15,24 @@ import org.slf4j.LoggerFactory;
 
 public class WorkerServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-	private static final Logger logger = LoggerFactory.getLogger(WorkerServlet.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(WorkerServlet.class);
 	
 	private final WorkerCore worker;
 
     public WorkerServlet() {
-    	logger.info("Starting backmeup worker core");
+    	LOGGER.info("Starting backmeup worker core");
     	worker = new WorkerCore();
     }
     
     @Override
     public void init() {
-    	logger.info("Initializing worker");
+    	LOGGER.info("Initializing worker");
 		worker.initialize();
-		logger.info("Initializing worker done.");
+		LOGGER.info("Initializing worker done.");
 		
-		logger.info("Starting worker");
+		LOGGER.info("Starting worker");
 		worker.start();
-		logger.info("Starting worker done.");
+		LOGGER.info("Starting worker done.");
     }
     
 	@Override
@@ -63,8 +63,8 @@ public class WorkerServlet extends HttpServlet {
 	
 	@Override
     public void destroy() {
-		logger.info("Shutting down backmeup worker core");
+		LOGGER.info("Shutting down backmeup worker core");
 		worker.shutdown();
-		logger.info("Shutdown complete");
+		LOGGER.info("Shutdown complete");
     }
 }
