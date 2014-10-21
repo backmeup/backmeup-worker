@@ -43,12 +43,6 @@
 		</dependency>
 
 		<dependency>
-			<groupId>org.elasticsearch</groupId>
-			<artifactId>elasticsearch</artifactId>
-			<version>${version.org.elasticsearch}</version>
-		</dependency>
-		
-		<dependency>
       		<groupId>org.apache.felix</groupId>
       		<artifactId>org.apache.felix.framework</artifactId>
       		<version>${version.org.apache.felix}</version>

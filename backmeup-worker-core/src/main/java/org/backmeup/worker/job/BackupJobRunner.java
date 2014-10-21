@@ -27,11 +27,6 @@ import org.backmeup.plugin.api.storage.Storage;
 import org.backmeup.plugin.api.storage.StorageException;
 import org.backmeup.service.client.BackmeupServiceFacade;
 import org.backmeup.worker.plugin.osgi.PluginImpl;
-import org.elasticsearch.client.Client;
-import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.common.settings.ImmutableSettings;
-import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -336,12 +331,13 @@ public class BackupJobRunner {
 //		thumbnailAction.doAction(params, storage, job, new JobStatusProgressor(job, "thumbnailAction"));
 
 		// After thumbnail rendering, run indexing
-		Settings settings = ImmutableSettings.settingsBuilder().put("cluster.name", indexName).build();
-		Client client = new TransportClient(settings).addTransportAddress(new InetSocketTransportAddress(indexHost, indexPort));
+		// TODO NO Direct access to elastic search, use indexer-client library/interface
+		// Settings settings = ImmutableSettings.settingsBuilder().put("cluster.name", indexName).build();
+		// Client client = new TransportClient(settings).addTransportAddress(new InetSocketTransportAddress(indexHost, indexPort));
 
 		Action indexAction = plugins.getAction("org.backmeup.indexing");
 //		indexAction.doAction(params, storage, job, new JobStatusProgressor(job,	"indexaction"));
-		client.close();
+		// client.close();
 	}
 	
 //	private JobStatus addStatusToDb(JobStatus status) {

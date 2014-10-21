@@ -43,7 +43,6 @@
 		<version.org.apache.felix>4.0.2</version.org.apache.felix>
 		<version.org.apache.httpcomponents>4.3.4</version.org.apache.httpcomponents>
 		<version.org.codehaus.jackson>1.9.13</version.org.codehaus.jackson>
-		<version.org.elasticsearch>0.90.7</version.org.elasticsearch>
 		<version.org.slf4j>1.7.6</version.org.slf4j>
 
 		<!-- Maven Plugin versions -->
