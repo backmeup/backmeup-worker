@@ -202,7 +202,7 @@ public class BackupJobRunner {
 				PluginDescribable ad = plugins.getPluginDescribableById("org.backmeup.indexer");
 				PluginProfileDTO indexActionProfile = new PluginProfileDTO();
 				indexActionProfile.setPluginId(ad.getId());
-				indexActionProfile.setConfigProperties(new HashMap<String, String>());
+				indexActionProfile.setProperties(new HashMap<String, String>());
 //				actions.add(new PluginProfileDTO(ad.getId(), ad.getPriority(), new HashMap<String, String>()));
 			}
 

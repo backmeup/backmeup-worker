@@ -130,6 +130,12 @@ public class PluginImpl implements Plugin {
 	}
 	
 	@Override
+	public boolean isPluginAvailable(String pluginId) {
+		ServiceReference ref = getReference(PluginDescribable.class, "(name=" + pluginId + ")");
+		return ref != null;
+	}
+	
+	@Override
     public PluginDescribable getPluginDescribableById(String sourceSinkId) {
 		return service(PluginDescribable.class, "(name=" + sourceSinkId + ")");
 	}
