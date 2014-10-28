@@ -66,7 +66,7 @@ public class KeyserverClient implements KeyserverFacade {
 		}
 	}
 
-	private Result execute(String path, ReqType type, String jsonParams) {
+	private Result execute(String requestPath, ReqType type, String jsonParams) {
 		HttpClient client = createClient();
 		int port = SCHEME_HTTP.equals(scheme) ? 80 : 443;
 		String rHost = host;
@@ -81,7 +81,7 @@ public class KeyserverClient implements KeyserverFacade {
 		}
 
 		try {
-			URI registerUri = new URI(scheme, null, rHost, port, path, null, null);
+			URI registerUri = new URI(scheme, null, rHost, port, requestPath, null, null);
 			HttpUriRequest request;
 			
 			switch (type) {

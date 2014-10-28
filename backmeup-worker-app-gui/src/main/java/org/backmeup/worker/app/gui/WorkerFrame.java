@@ -125,7 +125,7 @@ public class WorkerFrame extends JFrame {
 	public WorkerFrame() {
 		addWindowListener(new WindowAdapter() {
 			@Override
-			public void windowClosed(WindowEvent arg0) {
+			public void windowClosed(WindowEvent event) {
 				shutdownWroker();
 			}
 		});
@@ -314,9 +314,9 @@ public class WorkerFrame extends JFrame {
 						StringBuilder sb = new StringBuilder();
 						SortedSet<String> configLines = new TreeSet<>();
 
-						for (Map.Entry<Object, Object> e : workerProperties.entrySet()) {
-							String key = (String) e.getKey();
-							String value = (String) e.getValue();
+						for (Map.Entry<Object, Object> workerProperty : workerProperties.entrySet()) {
+							String key = (String) workerProperty.getKey();
+							String value = (String) workerProperty.getValue();
 
 							String line = key + ": " + value + "\n";
 							configLines.add(line);
