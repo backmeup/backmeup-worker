@@ -2,19 +2,17 @@ package org.backmeup.worker.job.receiver;
 
 import java.util.EventObject;
 
-import org.backmeup.model.BackupJob;
-
 public class JobReceivedEvent extends EventObject {
 	private static final long serialVersionUID = 6959348412326443090L;
 	
-	protected BackupJob backupJob;
+	protected Long jobId;
 
-	public JobReceivedEvent(Object obj, BackupJob backupJob) {
+	public JobReceivedEvent(Object obj, Long jobId) {
 		super(obj);
-		this.backupJob = backupJob;
+		this.jobId = jobId;
 	}
 
-	public BackupJob getBackupJob() {
-		return backupJob;
+	public Long getJobId() {
+		return jobId;
 	}
 }

@@ -6,9 +6,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.backmeup.model.BackupJob;
 import org.backmeup.model.exceptions.BackMeUpException;
-import org.backmeup.model.serializer.JsonSerializer;
+import org.backmeup.worker.utils.ByteUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,11 +118,12 @@ public class RabbitMQJobReceiver implements JobReceiver{
 							try {
 								QueueingConsumer.Delivery delivery = consumer.nextDelivery(mqTimeout.get());
 								if (delivery != null) {
-									String message = new String(delivery.getBody());
-									logger.info("Job received: " + message);
-
-									BackupJob job = JsonSerializer.deserialize(message, BackupJob.class);
-									fireEvent(new JobReceivedEvent(this, job));
+									byte[] body = delivery.getBody();
+									
+									Long jobId = ByteUtils.bytesToLong(body);
+									logger.info("Received job with id: " + jobId);
+									
+									fireEvent(new JobReceivedEvent(this, jobId));
 									
 									// Delay further receiving to ge the callback listener a chance
 									// to react on (e.g. pause or stop)

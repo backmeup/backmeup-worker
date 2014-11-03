@@ -2,7 +2,6 @@ package org.backmeup.worker.job;
 
 import org.backmeup.keyserver.client.KeyserverFacade;
 import org.backmeup.keyserver.client.impl.KeyserverClient;
-import org.backmeup.model.BackupJob;
 import org.backmeup.plugin.Plugin;
 import org.backmeup.plugin.api.storage.Storage;
 import org.backmeup.service.client.BackmeupServiceFacade;
@@ -14,7 +13,7 @@ import org.slf4j.LoggerFactory;
 public class BackupJobWorkerThread implements Runnable {
 	private static final Logger LOGGER = LoggerFactory.getLogger(BackupJobWorkerThread.class);
 	
-	private final BackupJob backupJob;
+	private final Long backupJobId;
 	private final String backupName;
 	
 	private final String indexHost;
@@ -34,12 +33,12 @@ public class BackupJobWorkerThread implements Runnable {
 	private final KeyserverFacade keyserverClient;
 	private final BackmeupServiceFacade bmuServiceClient;
 
-	public BackupJobWorkerThread(BackupJob backupJob, Plugin plugins, String indexHost, int indexPort, 
+	public BackupJobWorkerThread(Long backupJobId, Plugin plugins, String indexHost, int indexPort, 
 			String serviceScheme, String serviceHost, String servicePath, String serviceAccessToken,
 			String keyserverScheme, String keyserverHost, String keyserverPath,
 			String jobTempDir, String backupName) {
 		super();
-		this.backupJob = backupJob;
+		this.backupJobId = backupJobId;
 		this.backupName = backupName;
 		this.jobTempDir = jobTempDir;
 		this.plugins = plugins;
@@ -62,7 +61,7 @@ public class BackupJobWorkerThread implements Runnable {
 		try {
 			BackupJobRunner runner = new BackupJobRunner(plugins, keyserverClient, bmuServiceClient, indexHost, indexPort, jobTempDir, backupName);
 			Storage storage = ((PluginImpl)plugins).service(Storage.class, "(name=" + "org.backmeup.localfilesystemstorage" + ")");
-			runner.executeBackup(backupJob.getId(), storage);
+			runner.executeBackup(backupJobId, storage);
 		} catch (Exception e) {
 			LOGGER.error("Failed to process job", e);
 		}
