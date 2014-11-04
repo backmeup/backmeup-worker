@@ -105,7 +105,9 @@ public class BackupJobRunner {
 		// Open temporary storage
 		try {
 			Datasink sink = plugins.getDatasink(backupJob.getSink().getPluginId());
-			Properties sinkProperties = authenticationData.getByProfileId(backupJob.getSink().getProfileId());
+			Properties sinkAuthData = authenticationData.getByProfileId(backupJob.getSink().getProfileId());
+			Properties sinkProperties = new Properties();
+			List<String> sinkOptions = new ArrayList<>();
 
 			// delete previously stored status, as we only need the latest
 //			deleteOldStatus(persistentJob);
@@ -122,19 +124,23 @@ public class BackupJobRunner {
 			Datasource source = plugins.getDatasource(sourceProfile.getPluginId());
 
 			// Properties sourceProperties = authenticationData.getByProfileId(po.getProfile().getProfileId());
-			Properties sourceProperties = authenticationData.getByProfileId(sourceProfile.getProfileId());
+			Properties sourceAuthData = authenticationData.getByProfileId(sourceProfile.getProfileId());
 
+			// TODO: These should also come from Keyserver
 			List<String> sourceOptions = new ArrayList<String>();
 			if (sourceProfile.getOptions() != null) {
 				sourceOptions.addAll(sourceProfile.getOptions());
 			}
+			
+			// TODO: These should also come from Keyserver
+			Properties sourceProperties = new Properties();
 
 //			addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOADING, StatusCategory.INFO, new Date().getTime()));
 			LOGGER.info("Job " + backupJob.getJobId() + " downloading");
 			
 			// Download from source
 			try {
-				source.downloadAll(sourceProperties, sourceOptions, storage, new JobStatusProgressor(backupJob, "datasource"));
+				source.downloadAll(sourceAuthData, sourceProperties, sourceOptions, storage, new JobStatusProgressor(backupJob, "datasource"));
 			} catch (StorageException e) {
 //				logger.error("", e);
 //				errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOAD_FAILED, StatusCategory.WARNING, new Date().getTime(), e.getMessage())));
@@ -153,8 +159,8 @@ public class BackupJobRunner {
 
 			// make properties global for the action loop. So the plugins can communicate (filesplitt + encryption)
 			Properties params = new Properties();
-			params.putAll(sinkProperties);
-			params.putAll(sourceProperties);
+			params.putAll(sinkAuthData);
+			params.putAll(sourceAuthData);
 
 			// Execute Actions in sequence
 //			addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.PROCESSING, StatusCategory.INFO, new Date().getTime()));
@@ -253,9 +259,9 @@ public class BackupJobRunner {
 //				addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.UPLOADING, StatusCategory.INFO, new Date().getTime()));
 				LOGGER.info("Job " + backupJob.getJobId() + " uploading");
 
-				sinkProperties.setProperty("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
-				sinkProperties.setProperty("org.backmeup.userid", backupJob.getUser().getUserId() + "");
-				sink.upload(sinkProperties, storage, new JobStatusProgressor(backupJob, "datasink"));
+				sinkAuthData.setProperty("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
+				sinkAuthData.setProperty("org.backmeup.userid", backupJob.getUser().getUserId() + "");
+				sink.upload(sinkAuthData, sinkProperties, sinkOptions, storage, new JobStatusProgressor(backupJob, "datasink"));
 
 //				addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.SUCCESSFUL, StatusCategory.INFO, new Date().getTime()));
 				LOGGER.info("Job " + backupJob.getJobId() + " successful");
