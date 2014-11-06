@@ -16,8 +16,6 @@ public class BackupJobWorkerThread implements Runnable {
 	private final Long backupJobId;
 	private final String backupName;
 	
-	private final String indexHost;
-	private final int indexPort;
 	private final String jobTempDir;
 	
 	private final String keyserverScheme;
@@ -33,17 +31,16 @@ public class BackupJobWorkerThread implements Runnable {
 	private final KeyserverFacade keyserverClient;
 	private final BackmeupServiceFacade bmuServiceClient;
 
-	public BackupJobWorkerThread(Long backupJobId, Plugin plugins, String indexHost, int indexPort, 
-			String serviceScheme, String serviceHost, String servicePath, String serviceAccessToken,
-			String keyserverScheme, String keyserverHost, String keyserverPath,
-			String jobTempDir, String backupName) {
+	public BackupJobWorkerThread(Long backupJobId, Plugin plugins,
+			String serviceScheme, String serviceHost, String servicePath,
+			String serviceAccessToken, String keyserverScheme,
+			String keyserverHost, String keyserverPath, String jobTempDir,
+			String backupName) {
 		super();
 		this.backupJobId = backupJobId;
 		this.backupName = backupName;
 		this.jobTempDir = jobTempDir;
 		this.plugins = plugins;
-		this.indexHost = indexHost;
-		this.indexPort = indexPort;
 		this.keyserverScheme = keyserverScheme;
 		this.keyserverHost = keyserverHost;
 		this.keyserverPath = keyserverPath;
@@ -59,7 +56,7 @@ public class BackupJobWorkerThread implements Runnable {
 	@Override
 	public void run() {
 		try {
-			BackupJobRunner runner = new BackupJobRunner(plugins, keyserverClient, bmuServiceClient, indexHost, indexPort, jobTempDir, backupName);
+			BackupJobRunner runner = new BackupJobRunner(plugins, keyserverClient, bmuServiceClient, jobTempDir, backupName);
 			Storage storage = ((PluginImpl)plugins).service(Storage.class, "(name=" + "org.backmeup.localfilesystemstorage" + ")");
 			runner.executeBackup(backupJobId, storage);
 		} catch (Exception e) {

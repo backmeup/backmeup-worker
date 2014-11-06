@@ -41,10 +41,6 @@ public class BackupJobRunner {
 	private static final String ERROR_EMAIL_SUBJECT = "ERROR_EMAIL_SUBJECT";
 	private static final String ERROR_EMAIL_MIMETYPE = "ERROR_EMAIL_MIMETYPE";
 
-	private final String indexHost;
-	private final int    indexPort;
-	private final String indexName = "es-backmeup-cluster";
-
 	private final String jobTempDir;
 	private final String backupName;
 
@@ -54,12 +50,10 @@ public class BackupJobRunner {
 
 	private final ResourceBundle textBundle = ResourceBundle.getBundle("BackupJobRunner");
 
-	public BackupJobRunner(Plugin plugins, KeyserverFacade keyserver, BackmeupServiceFacade bmuService, String indexHost, int indexPort, String jobTempDir, String backupName) {
+	public BackupJobRunner(Plugin plugins, KeyserverFacade keyserver, BackmeupServiceFacade bmuService, String jobTempDir, String backupName) {
 		this.plugins = plugins;
 		this.keyserver = keyserver;
 		this.bmuService = bmuService;
-		this.indexHost = indexHost;
-		this.indexPort = indexPort;
 		this.jobTempDir = jobTempDir;
 		this.backupName = backupName;
 	}

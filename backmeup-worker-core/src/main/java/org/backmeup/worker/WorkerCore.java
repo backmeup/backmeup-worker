@@ -39,11 +39,7 @@ public class WorkerCore {
 	private final String mqHost;
 	private final String mqName;
 	private final int    mqWaitInterval;
-	
-	private final String indexHost;
-	private final int    indexPort;
-//	private final String indexClusterName;
-	
+		
 	private final String keyserverScheme;
 	private final String keyserverHost;
 	private final String keyserverPath;
@@ -77,11 +73,7 @@ public class WorkerCore {
 		this.mqHost = Configuration.getProperty("backmeup.message.queue.host");
 		this.mqName = Configuration.getProperty("backmeup.message.queue.name");
 		this.mqWaitInterval = 500;
-		
-		this.indexHost = Configuration.getProperty("backmeup.index.host");
-		this.indexPort = Integer.parseInt(Configuration.getProperty("backmeup.index.port"));
-//		this.indexClusterName = Configuration.getProperty("backmeup.index.cluster.name");
-		
+				
 		this.keyserverScheme = Configuration.getProperty("keyserver.scheme");
 		this.keyserverHost = Configuration.getProperty("keyserver.host");
 		this.keyserverPath = Configuration.getProperty("keyserver.path");
@@ -199,7 +191,6 @@ public class WorkerCore {
 		Long jobId = jre.getJobId();
 		Runnable backupJobWorker = new BackupJobWorkerThread(
 				jobId, plugins, 
-				indexHost, indexPort, 
 				bmuServiceScheme, bmuServiceHost, bmuServicePath, bmuServiceAccessToken,
 				keyserverScheme, keyserverHost, keyserverPath,
 				jobTempDir, backupName);
