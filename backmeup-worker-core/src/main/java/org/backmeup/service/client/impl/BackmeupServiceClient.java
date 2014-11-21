@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 public class BackmeupServiceClient implements BackmeupServiceFacade {
 	private static final int DEFAULT_PORT = 80;
 
-	private final Logger LOGGER = LoggerFactory.getLogger(BackmeupServiceClient.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(BackmeupServiceClient.class);
 
 	private final String scheme;
 

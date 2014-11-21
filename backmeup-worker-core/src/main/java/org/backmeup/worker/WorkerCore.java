@@ -21,7 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class WorkerCore {
-	private final Logger LOGGER = LoggerFactory.getLogger(WorkerCore.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(WorkerCore.class);
 	
 	private Boolean initialized;
 	private WorkerState currentState;

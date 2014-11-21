@@ -24,7 +24,7 @@ import com.rabbitmq.client.QueueingConsumer;
 public class RabbitMQJobReceiver implements JobReceiver{
 	private static final int DELAY_INTERVAL = 500;
 
-	private final Logger logger = LoggerFactory.getLogger(RabbitMQJobReceiver.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(RabbitMQJobReceiver.class);
 
 	private final String mqName;
 	private final String mqHost;
@@ -79,7 +79,7 @@ public class RabbitMQJobReceiver implements JobReceiver{
 	
 	public void initialize() {
 		// Connect to the message queue
-		logger.info("Connecting to the message queue");
+		LOGGER.info("Connecting to the message queue");
 
 		try {
 			ConnectionFactory factory = new ConnectionFactory();
@@ -107,7 +107,7 @@ public class RabbitMQJobReceiver implements JobReceiver{
 		receiverThread.set(new Thread(new Runnable() {
 			@Override
             public void run() {
-				logger.info("Starting message queue receiver");
+				LOGGER.info("Starting message queue receiver");
 				
 				QueueingConsumer consumer = new QueueingConsumer(mqChannel.get());
 				
@@ -121,7 +121,7 @@ public class RabbitMQJobReceiver implements JobReceiver{
 									byte[] body = delivery.getBody();
 									
 									Long jobId = ByteUtils.bytesToLong(body);
-									logger.info("Received job with id: " + jobId);
+									LOGGER.info("Received job with id: " + jobId);
 									
 									fireEvent(new JobReceivedEvent(this, jobId));
 									
@@ -130,30 +130,30 @@ public class RabbitMQJobReceiver implements JobReceiver{
 									Thread.sleep(DELAY_INTERVAL);
 								}
 							} catch (Exception ex) {
-								logger.error("Failed to receive job", ex);
+								LOGGER.error("Failed to receive job", ex);
 							}
 						}
 						if(pauseReceiver.get()) {
 							try {
 								Thread.sleep(pauseInterval.get());
 							} catch (InterruptedException e) {
-								logger.error("",e);
+								LOGGER.error("",e);
 							}
 						}
 					}
 
-					logger.info("Stopping message queue receiver");
+					LOGGER.info("Stopping message queue receiver");
 
 					mqChannel.get().close();
 					mqConnection.get().close();
 
 				} catch (IOException e) {
 					// Should only happen if message queue is down
-					logger.error("Message queue down", e);
+					LOGGER.error("Message queue down", e);
 					throw new BackMeUpException(e);
 				}
 
-				logger.info("Message queue receiver stopped");
+				LOGGER.info("Message queue receiver stopped");
 
 				stopReceiver.set(false);
 				receiverThread.set(null);
@@ -169,7 +169,7 @@ public class RabbitMQJobReceiver implements JobReceiver{
 			// Wait for thread to complete
 			receiverThread.get().join();
 		} catch (InterruptedException e) {
-			logger.error("", e);
+			LOGGER.error("", e);
 			throw new BackMeUpException(e);
 		}
 	}

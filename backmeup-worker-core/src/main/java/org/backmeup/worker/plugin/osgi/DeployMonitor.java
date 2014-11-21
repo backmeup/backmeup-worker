@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
  * OSGi.
  */
 public class DeployMonitor implements Runnable {
-  private final Logger logger = LoggerFactory.getLogger(DeployMonitor.class);
+  private final Logger LOGGER = LoggerFactory.getLogger(DeployMonitor.class);
 
   private final Map<File, Bundle> deployed = new HashMap<>();
   private ScheduledExecutorService executor;
@@ -54,7 +54,7 @@ public class DeployMonitor implements Runnable {
           monitor.wait();
         }
     } catch (InterruptedException e) {
-    	logger.error("", e);
+    	LOGGER.error("", e);
     }
   }
 
@@ -63,13 +63,13 @@ public class DeployMonitor implements Runnable {
     executor.shutdownNow();
     try {
       executor.awaitTermination(1, TimeUnit.MINUTES);
-      logger.error("Awaited termination of executor!");
+      LOGGER.error("Awaited termination of executor!");
       synchronized (monitor) {
         firstRun = true;
         monitor.notifyAll();
       }
     } catch (InterruptedException e) {
-    	logger.error("", e);
+    	LOGGER.error("", e);
     }
   }
 
@@ -87,7 +87,7 @@ public void run() {
             deployed.put(f, b);
             newlyInstalledBundles.add(b);
           } catch (Exception e) {
-        	  logger.error("", e);
+        	  LOGGER.error("", e);
           }
         }
       }
@@ -99,7 +99,7 @@ public void run() {
           newlyInstalledBundle.start();
         }
       } catch (Exception e) {
-    	  logger.error("", e);
+    	  LOGGER.error("", e);
       }
     }
     newlyInstalledBundles.clear();
@@ -116,7 +116,7 @@ public void run() {
           }
           toBeRemovedBundles.add(f);
         } catch (Exception e) {
-          logger.error("", e);
+          LOGGER.error("", e);
         }
       }
     }

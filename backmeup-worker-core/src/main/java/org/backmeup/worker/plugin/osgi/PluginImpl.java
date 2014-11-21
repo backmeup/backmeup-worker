@@ -57,7 +57,7 @@ import org.slf4j.LoggerFactory;
 
 @SuppressWarnings("rawtypes")
 public class PluginImpl implements Plugin {
-	private static final Logger logger = LoggerFactory.getLogger(PluginImpl.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(PluginImpl.class);
 
 	private final String deploymentDirPath;
 
@@ -89,7 +89,7 @@ public class PluginImpl implements Plugin {
 	@Override
 	public void startup() {
 		if (!started) {
-			logger.debug("Starting up PluginImpl!");
+			LOGGER.debug("Starting up PluginImpl!");
 			this.tempDirPath = this.tempDirPath + "/" + Long.toString(System.nanoTime());
 
 			this.deploymentDirectory = new File(deploymentDirPath);
@@ -105,7 +105,7 @@ public class PluginImpl implements Plugin {
 	@Override
 	public void shutdown() {
 		if (started) {
-			logger.debug("Shutting down PluginImpl!");
+			LOGGER.debug("Shutting down PluginImpl!");
 			this.deploymentMonitor.stop();
 			this.stopOSGiFramework();
 			this.started = false;
@@ -300,7 +300,7 @@ public class PluginImpl implements Plugin {
 			try {
 				refs = bundleContext().getServiceReferences(service.getName(), filter);
 			} catch (InvalidSyntaxException e) {
-				logger.error("", e);
+				LOGGER.error("", e);
 				throw new IllegalArgumentException(String.format("The filter '%s' is mallformed.", filter));
 			}
 			if (refs != null && refs.length > 0) {
@@ -340,12 +340,12 @@ public class PluginImpl implements Plugin {
 			config.put(Constants.FRAMEWORK_BUNDLE_PARENT, Constants.FRAMEWORK_BUNDLE_PARENT_FRAMEWORK);
 			config.put(Constants.FRAMEWORK_BOOTDELEGATION, exportedPackages);
 
-			logger.debug("EXPORTED PACKAGES: " + exportedPackages);
+			LOGGER.debug("EXPORTED PACKAGES: " + exportedPackages);
 
 			osgiFramework = factory.newFramework(config);
 			osgiFramework.start();
 		} catch (Exception e) {
-			logger.error("", e);
+			LOGGER.error("", e);
 			throw new RuntimeException(e);
 		}
 	}
@@ -359,11 +359,11 @@ public class PluginImpl implements Plugin {
 		try {
 			osgiFramework.stop();
 			osgiFramework.waitForStop(0);
-			logger.debug("OsgiFramework stopped.");
+			LOGGER.debug("OsgiFramework stopped.");
 		} catch (InterruptedException e) {
-			logger.error("", e);
+			LOGGER.error("", e);
 		} catch (BundleException e) {
-			logger.error("", e);
+			LOGGER.error("", e);
 		}
 	}
 
@@ -385,7 +385,7 @@ public class PluginImpl implements Plugin {
 			@SuppressWarnings("unchecked")
 			Object instance = context.getService(ref);
 			if (instance == null) {
-				logger.error(
+				LOGGER.error(
 						"FATAL ERROR:\n\tCalling the method \"{}\" of a null-instance from bundle \"{}\"; getService returned null!\n",
 						method.getName(), ref.getBundle().getSymbolicName());
 			}
