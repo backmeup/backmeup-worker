@@ -46,10 +46,10 @@
 		<profile>
 			<id>integration-tests</id>
 			<activation>
-				<property>
-					<name>!skipTests</name>
-				</property>
-			</activation>
+                <property>
+                    <name>integrationTests</name>
+                </property>
+            </activation>
 			<build>
 				<plugins>
 					<plugin>
