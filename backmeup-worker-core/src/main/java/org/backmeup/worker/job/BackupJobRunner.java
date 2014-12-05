@@ -8,8 +8,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.ResourceBundle;
 
-import org.backmeup.index.api.IndexClient;
-import org.backmeup.index.client.IndexClientFactory;
 import org.backmeup.keyserver.client.KeyserverFacade;
 import org.backmeup.keyserver.model.AuthDataResult;
 import org.backmeup.model.Token;
@@ -320,17 +318,13 @@ public class BackupJobRunner {
     private void doIndexing(Properties params, Storage storage, BackupJobDTO job) throws ActionException {
         // If we do indexing, the Thumbnail renderer needs to run before!
         Action thumbnailAction = this.plugins.getAction("org.backmeup.thumbnail");
-        //TODO AL clarify with SP: thumbnailAction.doAction(null, null, null, storage, job, new JobStatusProgressor(job, "thumbnailAction"));
+        //TODO AL clarify with SP: 
+        //thumbnailAction.doAction(null, null, null, storage, job, new JobStatusProgressor(job, "thumbnailAction"));
 
         // After thumbnail rendering, run indexing
-        // NO Direct access to elastic search use the indexer-client library to get a user specific IndexClient
-        IndexClient client = new IndexClientFactory().getIndexClient(job.getUser().getUserId());
-
         Action indexAction = this.plugins.getAction("org.backmeup.indexing");
-        //TODO AL need to call the indexAction with the proper client
-        //e.g. like Action indexAction = new IndexAction(client);
-        //TODO AL clarify with SP: indexAction.doAction(params, storage, job, new JobStatusProgressor(job, "indexaction"));
-        client.close();
+        //TODO AL clarify with SP: 
+        //indexAction.doAction(null, null, null, storage, job, new JobStatusProgressor(job, "indexaction"));
     }
 
     //	private JobStatus addStatusToDb(JobStatus status) {
