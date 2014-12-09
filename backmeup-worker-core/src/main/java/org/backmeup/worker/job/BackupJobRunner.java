@@ -40,6 +40,9 @@ public class BackupJobRunner {
     private static final String ERROR_EMAIL_SUBJECT = "ERROR_EMAIL_SUBJECT";
     private static final String ERROR_EMAIL_MIMETYPE = "ERROR_EMAIL_MIMETYPE";
 
+    private static final String INDEXING_PLUGIN_OSGI_BUNDLE_ID = "org.backmeup.indexing";
+    private static final String INDEXER_BACKMEUP_PLUGIN_ID = "org.backmeup.indexer";
+
     private final String jobTempDir;
     private final String backupName;
 
@@ -180,7 +183,7 @@ public class BackupJobRunner {
             List<PluginProfileDTO> actions = backupJob.getActions();
             PluginProfileDTO indexer = null;
             for (PluginProfileDTO actionProfile : actions) {
-                if ("org.backmeup.indexer".equals(actionProfile.getPluginId())) {
+                if (INDEXER_BACKMEUP_PLUGIN_ID.equals(actionProfile.getPluginId())) {
                     indexer = actionProfile;
                     break;
                 }
@@ -188,7 +191,7 @@ public class BackupJobRunner {
 
             if (doIndexing && indexer == null) {
                 // if we need to index, add the indexer to the requested actions
-                PluginDescribable ad = this.plugins.getPluginDescribableById("org.backmeup.indexer");
+                PluginDescribable ad = this.plugins.getPluginDescribableById(INDEXING_PLUGIN_OSGI_BUNDLE_ID);
                 PluginProfileDTO indexActionProfile = new PluginProfileDTO();
                 indexActionProfile.setPluginId(ad.getId());
                 indexActionProfile.setProperties(new HashMap<String, String>());
@@ -215,7 +218,7 @@ public class BackupJobRunner {
                         // After splitting, run encryption
                         action = this.plugins.getAction(actionId);
                         //						action.doAction(params, storage, persistentJob,	new JobStatusProgressor(persistentJob, "encryptionaction"));
-                    } else if ("org.backmeup.indexer".equals(actionId)) {
+                    } else if (INDEXER_BACKMEUP_PLUGIN_ID.equals(actionId)) {
                         // Do nothing - we ignore index action declaration in the job description and use
                         // the info from the user properties instead
                         if (doIndexing) {
