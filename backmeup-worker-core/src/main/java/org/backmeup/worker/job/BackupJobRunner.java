@@ -318,13 +318,11 @@ public class BackupJobRunner {
     private void doIndexing(Properties params, Storage storage, BackupJobDTO job) throws ActionException {
         // If we do indexing, the Thumbnail renderer needs to run before!
         Action thumbnailAction = this.plugins.getAction("org.backmeup.thumbnail");
-        //TODO AL clarify with SP: 
-        //thumbnailAction.doAction(null, null, null, storage, job, new JobStatusProgressor(job, "thumbnailAction"));
+        thumbnailAction.doAction(null, null, null, storage, job, new JobStatusProgressor(job, "thumbnailAction"));
 
         // After thumbnail rendering, run indexing
         Action indexAction = this.plugins.getAction("org.backmeup.indexing");
-        //TODO AL clarify with SP: 
-        //indexAction.doAction(null, null, null, storage, job, new JobStatusProgressor(job, "indexaction"));
+        indexAction.doAction(null, null, null, storage, job, new JobStatusProgressor(job, "indexaction"));
     }
 
     //	private JobStatus addStatusToDb(JobStatus status) {
