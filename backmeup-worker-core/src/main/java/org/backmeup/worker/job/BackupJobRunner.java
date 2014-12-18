@@ -121,7 +121,8 @@ public class BackupJobRunner {
             }
 
             // TODO: These should also come from Keyserver
-            Properties sourceProperties = new Properties(sourceAuthData);
+            Properties sourceProperties = new Properties();
+            sourceProperties.putAll(sourceAuthData);
 
             //			addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOADING, StatusCategory.INFO, new Date().getTime()));
             LOGGER.info("Job " + backupJob.getJobId() + " downloading");
