@@ -10,96 +10,98 @@ import javax.swing.JComponent;
 
 @SuppressWarnings("serial")
 public class PieMeter extends JComponent {
-	protected static final int STROKE_WIDTH = 1;
+    protected static final int STROKE_WIDTH = 1;
 
-	private int min = 0;
-	private int max = 100;
-	private int value = min;
-	private Color backColor = Color.white;
-	private Color foreColor = Color.red;
-	private Color borderColor = Color.blue;
-	
-	private Stroke stroke = new BasicStroke(STROKE_WIDTH);
+    private int min = 0;
+    private int max = 100;
+    private int value = min;
+    private Color backColor = Color.white;
+    private Color foreColor = Color.red;
+    private Color borderColor = Color.blue;
 
-	public PieMeter() {
-		
-	}
+    private Stroke stroke = new BasicStroke(STROKE_WIDTH);
 
-	public void setMinimum(int min) {
-		this.min = min;
-		repaint();
-	}
+    public PieMeter() {
 
-	public int getMinimum() {
-		return min;
-	}
+    }
 
-	public void setMaximum(int max) {
-		this.max = max;
-		repaint();
-	}
+    public void setMinimum(int min) {
+        this.min = min;
+        repaint();
+    }
 
-	public int getMaximum() {
-		return max;
-	}
+    public int getMinimum() {
+        return min;
+    }
 
-	public void setValue(int val) {
-		if (min <= val && val <= max) {
-			this.value = val;
-			repaint();
-		}
-	}
+    public void setMaximum(int max) {
+        this.max = max;
+        repaint();
+    }
 
-	public int getValue() {
-		return value;
-	}
+    public int getMaximum() {
+        return max;
+    }
 
-	public void setBackgroundColor(Color col) {
-		this.backColor = col;
-		repaint();
-	}
+    public void setValue(int val) {
+        if (min <= val && val <= max) {
+            this.value = val;
+            repaint();
+        }
+    }
 
-	public Color getBackgroundColor() {
-		return this.backColor;
-	}
+    public int getValue() {
+        return value;
+    }
 
-	public void setForegroundColor(Color col) {
-		this.foreColor = col;
-		repaint();
-	}
+    public void setBackgroundColor(Color col) {
+        this.backColor = col;
+        repaint();
+    }
 
-	public Color getForegroundColor() {
-		return this.foreColor;
-	}
+    public Color getBackgroundColor() {
+        return this.backColor;
+    }
 
-	public void setBorderColor(Color col) {
-		this.borderColor = col;
-		repaint();
-	}
+    public void setForegroundColor(Color col) {
+        this.foreColor = col;
+        repaint();
+    }
 
-	public Color getBorderColor() {
-		return this.borderColor;
-	}
+    public Color getForegroundColor() {
+        return this.foreColor;
+    }
 
-	@Override
+    public void setBorderColor(Color col) {
+        this.borderColor = col;
+        repaint();
+    }
+
+    public Color getBorderColor() {
+        return this.borderColor;
+    }
+
+    @Override
     public void paintComponent(Graphics g) {
-		Graphics2D g2 = (Graphics2D) g;
-		paintDisc(g2, (double) value / (max - min), borderColor, foreColor, backColor);
-	}
+        Graphics2D g2 = (Graphics2D) g;
+        paintDisc(g2, (double) value / (max - min), borderColor, foreColor,
+                backColor);
+    }
 
-	private void paintDisc(Graphics2D g, double percFilled, Color borderColor, Color foreColor, Color backColor) {
-		if (percFilled >= 0 && percFilled <= 1) {
-			int w = this.getWidth() - STROKE_WIDTH;
-			int h = this.getHeight() - STROKE_WIDTH;
-			int theta = (int) (360 * percFilled + 0.5);
+    private void paintDisc(Graphics2D g, double percFilled, Color borderColor,
+            Color foreColor, Color backColor) {
+        if (percFilled >= 0 && percFilled <= 1) {
+            int w = this.getWidth() - STROKE_WIDTH;
+            int h = this.getHeight() - STROKE_WIDTH;
+            int theta = (int) (360 * percFilled + 0.5);
 
-			g.setStroke(stroke);
-			g.setColor(backColor);
-			g.fillOval(STROKE_WIDTH / 2, STROKE_WIDTH / 2, w, h);
-			g.setColor(foreColor);
-			g.fillArc(STROKE_WIDTH / 2, STROKE_WIDTH / 2, w, h, 90, -theta);
-			g.setColor(borderColor);
-			g.drawOval(STROKE_WIDTH / 2, STROKE_WIDTH / 2, w, h);
-		}
-	}
+            g.setStroke(stroke);
+            g.setColor(backColor);
+            g.fillOval(STROKE_WIDTH / 2, STROKE_WIDTH / 2, w, h);
+            g.setColor(foreColor);
+            g.fillArc(STROKE_WIDTH / 2, STROKE_WIDTH / 2, w, h, 90, -theta);
+            g.setColor(borderColor);
+            g.drawOval(STROKE_WIDTH / 2, STROKE_WIDTH / 2, w, h);
+        }
+    }
 }

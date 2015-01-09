@@ -15,46 +15,46 @@ import ch.qos.logback.core.encoder.EchoEncoder;
 import ch.qos.logback.core.encoder.Encoder;
 
 public class LogTextAppender extends AppenderBase<ILoggingEvent> {
-	private Encoder<ILoggingEvent> encoder = new EchoEncoder<>();
-	private ByteArrayOutputStream out = new ByteArrayOutputStream();
-	
-	private JTextArea jTextArea;
+    private Encoder<ILoggingEvent> encoder = new EchoEncoder<>();
+    private ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-	public LogTextAppender(JTextArea jTextArea) {
-		this.jTextArea = jTextArea;
-		LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
-		setContext(lc);
-		start();
-		lc.getLogger("ROOT").addAppender(this);
-	}
+    private JTextArea jTextArea;
 
-	@Override
-	public void start() {
-		try {
-			encoder.init(out);
-		} catch (IOException e) {
-		}
-		super.start();
-	}
+    public LogTextAppender(JTextArea jTextArea) {
+        this.jTextArea = jTextArea;
+        LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
+        setContext(lc);
+        start();
+        lc.getLogger("ROOT").addAppender(this);
+    }
 
-	@Override
-	public void append(ILoggingEvent event) {
-		try {
-			encoder.doEncode(event);
-			out.flush();
-			final String line = out.toString(); 
-			
-			SwingUtilities.invokeLater(new Runnable() {
-				     @Override
-                    public void run() {
-				          if (jTextArea != null) {
-				             jTextArea.append(line);
-				         }
-				     }
-				 });
-			out.reset();
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-	}
+    @Override
+    public void start() {
+        try {
+            encoder.init(out);
+        } catch (IOException e) {
+        }
+        super.start();
+    }
+
+    @Override
+    public void append(ILoggingEvent event) {
+        try {
+            encoder.doEncode(event);
+            out.flush();
+            final String line = out.toString();
+
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    if (jTextArea != null) {
+                        jTextArea.append(line);
+                    }
+                }
+            });
+            out.reset();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
