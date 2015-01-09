@@ -103,7 +103,7 @@ public class BackupJobRunner {
             //			deleteOldStatus(persistentJob);
 
             //			addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.STARTED, StatusCategory.INFO, new Date().getTime()));
-            LOGGER.info("Job " + backupJob.getJobId() + " startet");
+            LOGGER.info("Job " + backupJob.getJobId() + " startet for userID:" + backupJob.getUser().getUserId());
 
             long previousSize = 0;
 
