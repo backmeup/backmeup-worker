@@ -25,7 +25,7 @@ import org.backmeup.plugin.api.connectors.DatasourceException;
 import org.backmeup.plugin.api.connectors.Progressable;
 import org.backmeup.plugin.api.storage.Storage;
 import org.backmeup.plugin.api.storage.StorageException;
-import org.backmeup.service.client.BackmeupServiceFacade;
+import org.backmeup.service.client.BackmeupService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,11 +48,11 @@ public class BackupJobRunner {
 
     private final Plugin plugins;
     private final KeyserverFacade keyserver;
-    private final BackmeupServiceFacade bmuService;
+    private final BackmeupService bmuService;
 
     private final ResourceBundle textBundle = ResourceBundle.getBundle("BackupJobRunner");
 
-    public BackupJobRunner(Plugin plugins, KeyserverFacade keyserver, BackmeupServiceFacade bmuService,
+    public BackupJobRunner(Plugin plugins, KeyserverFacade keyserver, BackmeupService bmuService,
             String jobTempDir, String backupName) {
         this.plugins = plugins;
         this.keyserver = keyserver;
