@@ -365,9 +365,7 @@ public class WorkerFrame extends JFrame {
         noOfCurrentJobs = workerCore.getNoOfCurrentJobs();
         noOfFinishedJobs = workerCore.getNoOfFinishedJobs();
         noOfFetchedJobs = workerCore.getNoOfFetchedJobs();
-        // noOfFailedJobs = workerCore.getNoOfFailedJobs();
-        noOfFailedJobs = 0;
-
+        noOfFailedJobs = workerCore.getNoOfFailedJobs();
     }
 
     private void updateControls() {
