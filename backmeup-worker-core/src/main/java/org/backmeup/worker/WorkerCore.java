@@ -29,6 +29,7 @@ public class WorkerCore {
     private final int maxWorkerThreads;
     private final AtomicInteger noOfRunningJobs;
     private final AtomicInteger noOfFetchedJobs;
+    private final AtomicInteger noOfFinishedJobs;
     private final AtomicInteger noOfFaildJobs;
 
     private final String pluginsDeploymentDir;
@@ -68,6 +69,7 @@ public class WorkerCore {
 
         this.noOfRunningJobs = new AtomicInteger(0);
         this.noOfFetchedJobs = new AtomicInteger(0);
+        this.noOfFinishedJobs = new AtomicInteger(0);
         this.noOfFaildJobs = new AtomicInteger(0);
 
         this.mqHost = Configuration.getProperty("backmeup.message.queue.host");
@@ -114,7 +116,7 @@ public class WorkerCore {
     }
 
     public int getNoOfFinishedJobs() {
-        return (int) this.executorPool.getCompletedTaskCount();
+        return noOfFinishedJobs.get();
     }
 
     public int getNoOfFetchedJobs() {
@@ -205,6 +207,8 @@ public class WorkerCore {
     private void jobThreadAterExecute(Runnable r, Throwable t) {
         if(t != null) {
             noOfFaildJobs.getAndIncrement();
+        } else {
+            noOfFinishedJobs.getAndIncrement();
         }
 
         this.noOfRunningJobs.getAndDecrement();
