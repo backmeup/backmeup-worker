@@ -6,6 +6,7 @@ import org.backmeup.plugin.Plugin;
 import org.backmeup.plugin.api.storage.Storage;
 import org.backmeup.service.client.BackmeupService;
 import org.backmeup.service.client.impl.BackmeupServiceClient;
+import org.backmeup.worker.WorkerException;
 import org.backmeup.worker.plugin.osgi.PluginImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,7 +61,8 @@ public class BackupJobWorkerThread implements Runnable {
             Storage storage = ((PluginImpl)plugins).service(Storage.class, "(name=" + "org.backmeup.localfilesystemstorage" + ")");
             runner.executeBackup(backupJobId, storage);
         } catch (Exception e) {
-            LOGGER.error("Failed to process job", e);
+            LOGGER.error("", e);
+            throw new WorkerException("Failed to process job", e);
         }
     }
 }
