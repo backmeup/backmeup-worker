@@ -52,8 +52,8 @@ public class BackupJobRunner {
 
     private final ResourceBundle textBundle = ResourceBundle.getBundle("BackupJobRunner");
 
-    public BackupJobRunner(Plugin plugins, KeyserverFacade keyserver, BackmeupService bmuService,
-            String jobTempDir, String backupName) {
+    public BackupJobRunner(Plugin plugins, KeyserverFacade keyserver, BackmeupService bmuService, String jobTempDir,
+            String backupName) {
         this.plugins = plugins;
         this.keyserver = keyserver;
         this.bmuService = bmuService;
@@ -84,13 +84,13 @@ public class BackupJobRunner {
         // Store newToken for the next backup and set status to running
         this.bmuService.updateBackupJob(backupJob);
 
-//        Protocol Overview requires information about executed jobs
-//        JobProtocolDTO protocol = new JobProtocolDTO();
-//        protocol.setSinkTitle(persistentJob.getSink().getTitle());
-//        protocol.setExecutionTime(new Date().getTime());
+        //        Protocol Overview requires information about executed jobs
+        //        JobProtocolDTO protocol = new JobProtocolDTO();
+        //        protocol.setSinkTitle(persistentJob.getSink().getTitle());
+        //        protocol.setExecutionTime(new Date().getTime());
 
         // track the error status messages
-//        List<JobStatus> errorStatus = new ArrayList<JobStatus>();
+        //        List<JobStatus> errorStatus = new ArrayList<JobStatus>();
 
         Date jobStarted = new Date();
 
@@ -100,9 +100,9 @@ public class BackupJobRunner {
             Properties sinkAuthData = authenticationData.getByProfileId(backupJob.getSink().getProfileId());
 
             // delete previously stored status, as we only need the latest
-//            deleteOldStatus(persistentJob);
+            //            deleteOldStatus(persistentJob);
 
-//            addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.STARTED, StatusCategory.INFO, new Date().getTime()));
+            //            addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.STARTED, StatusCategory.INFO, new Date().getTime()));
             LOGGER.info("Job " + backupJob.getJobId() + " startet for userID:" + backupJob.getUser().getUserId());
 
             long previousSize = 0;
@@ -124,7 +124,7 @@ public class BackupJobRunner {
             Properties sourceProperties = new Properties();
             sourceProperties.putAll(sourceAuthData);
 
-//            addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOADING, StatusCategory.INFO, new Date().getTime()));
+            //            addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOADING, StatusCategory.INFO, new Date().getTime()));
             LOGGER.info("Job " + backupJob.getJobId() + " downloading");
 
             // Download from source
@@ -133,16 +133,16 @@ public class BackupJobRunner {
                         backupJob, "datasource"));
             } catch (StorageException e) {
                 LOGGER.warn("Job " + backupJob.getJobId() + " faild with message: " + e);
-//                errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOAD_FAILED, StatusCategory.WARNING, new Date().getTime(), e.getMessage())));
+                //                errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOAD_FAILED, StatusCategory.WARNING, new Date().getTime(), e.getMessage())));
             } catch (DatasourceException e) {
                 LOGGER.warn("Job " + backupJob.getJobId() + " faild with message: " + e);
-//                errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOAD_FAILED, StatusCategory.WARNING, new Date().getTime(), e.getMessage())));
+                //                errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOAD_FAILED, StatusCategory.WARNING, new Date().getTime(), e.getMessage())));
             }
 
             // for each datasource add an entry with bytes it consumed
             long currentSize = storage.getDataObjectSize() - previousSize;
-//            protocol.addMember(new JobProtocolMemberDTO(protocol.getId(), "po.getProfile().getProfileName()", currentSize));
-//            protocol.setSpace((int)currentSize);
+            //            protocol.addMember(new JobProtocolMemberDTO(protocol.getId(), "po.getProfile().getProfileName()", currentSize));
+            //            protocol.setSpace((int)currentSize);
             previousSize = storage.getDataObjectSize();
 
             // make properties global for the action loop. So the plugins can communicate (filesplitt + encryption)
@@ -151,7 +151,7 @@ public class BackupJobRunner {
             params.putAll(sourceAuthData);
 
             // Execute Actions in sequence
-//            addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.PROCESSING, StatusCategory.INFO, new Date().getTime()));
+            //            addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.PROCESSING, StatusCategory.INFO, new Date().getTime()));
             LOGGER.info("Job " + backupJob.getJobId() + " processing");
 
             // if no actions are specified for this backup job,
@@ -223,7 +223,9 @@ public class BackupJobRunner {
                         // Do nothing - we ignore index action declaration in the job description and use
                         // the info from the user properties instead
                         if (doIndexing) {
-                            doIndexing(params, storage, backupJob);
+                            sinkAuthData.setProperty("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
+                            Properties sinkProperties = new Properties(sinkAuthData);
+                            doIndexing(sinkProperties, params, storage, backupJob);
                         }
 
                     } else {
@@ -235,7 +237,7 @@ public class BackupJobRunner {
                     // Should only happen in case of problems in the backmeup-service (file I/O, DB access, etc.)
                     // We'll handle that as a fatal error
                     LOGGER.error("Job " + backupJob.getJobId() + " faild with message: " + e);
-//                    errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
+                    //                    errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
                 } finally {
 
                 }
@@ -243,7 +245,7 @@ public class BackupJobRunner {
 
             try {
                 // Upload to Sink
-//                addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.UPLOADING, StatusCategory.INFO, new Date().getTime()));
+                //                addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.UPLOADING, StatusCategory.INFO, new Date().getTime()));
                 LOGGER.info("Job " + backupJob.getJobId() + " uploading");
 
                 sinkAuthData.setProperty("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
@@ -254,11 +256,11 @@ public class BackupJobRunner {
                 sink.upload(sinkAuthData, sinkProperties, sinkOptions, storage, new JobStatusProgressor(backupJob,
                         "datasink"));
 
-//                addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.SUCCESSFUL, StatusCategory.INFO, new Date().getTime()));
+                //                addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.SUCCESSFUL, StatusCategory.INFO, new Date().getTime()));
                 LOGGER.info("Job " + backupJob.getJobId() + " successful");
             } catch (StorageException e) {
                 LOGGER.error("Job " + backupJob.getJobId() + " faild with message: " + e);
-//                errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
+                //                errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
             }
 
             // store job protocol within database
@@ -281,8 +283,8 @@ public class BackupJobRunner {
 
         } catch (Exception e) {
             LOGGER.error("Job " + backupJob.getJobId() + " faild with message: " + e);
-//            storeJobProtocol(backupJob, protocol, 0, false);
-//            errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
+            //            storeJobProtocol(backupJob, protocol, 0, false);
+            //            errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
 
             int processedItems = 0;
             try {
@@ -305,56 +307,57 @@ public class BackupJobRunner {
         }
 
         // send error message, if there were any error status messages
-//        if (!errorStatus.isEmpty()) {
-//            bmuService.sendEmail(job.getUser().getEmail(), MessageFormat.format(
-//                    textBundle.getString(ERROR_EMAIL_SUBJECT), job.getUser().getEmail()),
-//                    MessageFormat.format(
-//                            textBundle.getString(ERROR_EMAIL_TEXT), job.getUser().getEmail(),
-//                            job.getJobTitle()));
-//        }
-        
+        //        if (!errorStatus.isEmpty()) {
+        //            bmuService.sendEmail(job.getUser().getEmail(), MessageFormat.format(
+        //                    textBundle.getString(ERROR_EMAIL_SUBJECT), job.getUser().getEmail()),
+        //                    MessageFormat.format(
+        //                            textBundle.getString(ERROR_EMAIL_TEXT), job.getUser().getEmail(),
+        //                            job.getJobTitle()));
+        //        }
+
         this.bmuService.updateBackupJob(backupJob);
     }
 
-    private void doIndexing(Properties params, Storage storage, BackupJobDTO job) throws ActionException {
+    private void doIndexing(Properties accessData, Properties params, Storage storage, BackupJobDTO job)
+            throws ActionException {
         // If we do indexing, the Thumbnail renderer needs to run before!
         Action thumbnailAction = this.plugins.getAction("org.backmeup.thumbnail");
         thumbnailAction.doAction(null, null, null, storage, job, new JobStatusProgressor(job, "thumbnailAction"));
 
         // After thumbnail rendering, run indexing
         Action indexAction = this.plugins.getAction("org.backmeup.indexing");
-        indexAction.doAction(null, null, null, storage, job, new JobStatusProgressor(job, "indexaction"));
+        indexAction.doAction(accessData, null, null, storage, job, new JobStatusProgressor(job, "indexaction"));
     }
 
-//    private JobStatus addStatusToDb(JobStatus status) {
-//        logger.debug("Job status: {}", status.getMessage());
-//        bmuService.saveStatus(status);
-//        return status;
-//    }
-//
-//    private void deleteOldStatus(BackupJobDTO persistentJob) {
-//        bmuService.deleteStatusBefore(persistentJob.getJobId(), new Date());
-//    }
-//
-//    private void storeJobProtocol(BackupJobDTO job, JobProtocolDTO protocol, int storedEntriesCount, boolean success) {
-//        // remove old entries, then store the new one
-//        bmuService.deleteJobProtocolByUsername(job.getUser().getUsername());
-//
-//        protocol.setUser(job.getUser());
-//        protocol.setJobId(job.getJobId());
-//        protocol.setSuccessful(success);
-//        protocol.setProcessedItems(storedEntriesCount);
-//
-//        if (protocol.isSuccessful()) {
-//            job.setLastSuccessful(protocol.getExecutionTime());
-//            job.setJobStatus(JobStatus.successful);
-//        } else {
-//            job.setLastFailed(protocol.getExecutionTime());
-//            job.setJobStatus(JobStatus.error);
-//        }
-//
-//        bmuService.saveJobProtocol(job.getUser().getUsername(), job.getJobId(), protocol);
-//    }
+    //    private JobStatus addStatusToDb(JobStatus status) {
+    //        logger.debug("Job status: {}", status.getMessage());
+    //        bmuService.saveStatus(status);
+    //        return status;
+    //    }
+    //
+    //    private void deleteOldStatus(BackupJobDTO persistentJob) {
+    //        bmuService.deleteStatusBefore(persistentJob.getJobId(), new Date());
+    //    }
+    //
+    //    private void storeJobProtocol(BackupJobDTO job, JobProtocolDTO protocol, int storedEntriesCount, boolean success) {
+    //        // remove old entries, then store the new one
+    //        bmuService.deleteJobProtocolByUsername(job.getUser().getUsername());
+    //
+    //        protocol.setUser(job.getUser());
+    //        protocol.setJobId(job.getJobId());
+    //        protocol.setSuccessful(success);
+    //        protocol.setProcessedItems(storedEntriesCount);
+    //
+    //        if (protocol.isSuccessful()) {
+    //            job.setLastSuccessful(protocol.getExecutionTime());
+    //            job.setJobStatus(JobStatus.successful);
+    //        } else {
+    //            job.setLastFailed(protocol.getExecutionTime());
+    //            job.setJobStatus(JobStatus.error);
+    //        }
+    //
+    //        bmuService.saveJobProtocol(job.getUser().getUsername(), job.getJobId(), protocol);
+    //    }
 
     private String generateTmpDirName(BackupJobDTO job, PluginProfileDTO profile) {
         SimpleDateFormat formatter = null;
@@ -394,7 +397,7 @@ public class BackupJobRunner {
         @Override
         public void progress(String message) {
             LOGGER.info("Job {} [{}] {}", this.job.getJobId(), this.category, message);
-//            addStatusToDb(new JobStatus(job.getJobId(), "info", category, new Date().getTime(),  message));
+            //            addStatusToDb(new JobStatus(job.getJobId(), "info", category, new Date().getTime(),  message));
         }
     }
 }
