@@ -223,9 +223,12 @@ public class BackupJobRunner {
                         // Do nothing - we ignore index action declaration in the job description and use
                         // the info from the user properties instead
                         if (doIndexing) {
-                            sinkAuthData.setProperty("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
-                            Properties sinkProperties = new Properties(sinkAuthData);
-                            doIndexing(sinkProperties, params, storage, backupJob);
+                            //hand over information from PluginDescribable, etc. to indexAction
+                            PluginDescribable pluginDescr = this.plugins.getPluginDescribableById(backupJob.getSink()
+                                    .getPluginId());
+                            Properties p = pluginDescr.getMetadata(sinkAuthData);
+                            p.setProperty("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
+                            doIndexing(p, params, storage, backupJob);
                         }
 
                     } else {
@@ -318,7 +321,7 @@ public class BackupJobRunner {
         this.bmuService.updateBackupJob(backupJob);
     }
 
-    private void doIndexing(Properties accessData, Properties params, Storage storage, BackupJobDTO job)
+    private void doIndexing(Properties properties, Properties params, Storage storage, BackupJobDTO job)
             throws ActionException {
         // If we do indexing, the Thumbnail renderer needs to run before!
         Action thumbnailAction = this.plugins.getAction("org.backmeup.thumbnail");
@@ -326,7 +329,7 @@ public class BackupJobRunner {
 
         // After thumbnail rendering, run indexing
         Action indexAction = this.plugins.getAction("org.backmeup.indexing");
-        indexAction.doAction(accessData, null, null, storage, job, new JobStatusProgressor(job, "indexaction"));
+        indexAction.doAction(null, properties, null, storage, job, new JobStatusProgressor(job, "indexaction"));
     }
 
     //    private JobStatus addStatusToDb(JobStatus status) {
