@@ -227,7 +227,11 @@ public class BackupJobRunner {
                             PluginDescribable pluginDescr = this.plugins.getPluginDescribableById(backupJob.getSink()
                                     .getPluginId());
                             Properties p = pluginDescr.getMetadata(sinkAuthData);
-                            p.setProperty("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
+                            //add the BMU_filegenerator_530_26_01_2015_12_56 prefix for indexer plugin
+                            p.setProperty("org.backmeup.bmuprefix", getLastSplitElement(tmpDir, "/"));
+                            //add 
+                            p.setProperty("org.backmeup.thumnails.tmpdir",
+                                    "/data/thumbnails/" + getLastSplitElement(tmpDir, "/"));
                             doIndexing(p, params, storage, backupJob);
                         }
 
@@ -325,7 +329,7 @@ public class BackupJobRunner {
             throws ActionException {
         // If we do indexing, the Thumbnail renderer needs to run before!
         Action thumbnailAction = this.plugins.getAction("org.backmeup.thumbnail");
-        thumbnailAction.doAction(null, null, null, storage, job, new JobStatusProgressor(job, "thumbnailAction"));
+        thumbnailAction.doAction(null, properties, null, storage, job, new JobStatusProgressor(job, "thumbnailAction"));
 
         // After thumbnail rendering, run indexing
         Action indexAction = this.plugins.getAction("org.backmeup.indexing");
