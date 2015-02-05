@@ -100,10 +100,10 @@ public class BackupJobRunner {
             Properties sinkAuthData = authenticationData.getByProfileId(backupJob.getSink().getProfileId());
 
             // delete previously stored status, as we only need the latest
-            //            deleteOldStatus(persistentJob);
+            //deleteOldStatus(persistentJob);
 
-            //            addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.STARTED, StatusCategory.INFO, new Date().getTime()));
-            LOGGER.info("Job " + backupJob.getJobId() + " startet for userID:" + backupJob.getUser().getUserId());
+            //addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.STARTED, StatusCategory.INFO, new Date().getTime()));
+            LOGGER.info("Job " + backupJob.getJobId() + " started for userID:" + backupJob.getUser().getUserId());
 
             long previousSize = 0;
 
@@ -124,25 +124,22 @@ public class BackupJobRunner {
             Properties sourceProperties = new Properties();
             sourceProperties.putAll(sourceAuthData);
 
-            //            addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOADING, StatusCategory.INFO, new Date().getTime()));
+            //addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOADING, StatusCategory.INFO, new Date().getTime()));
             LOGGER.info("Job " + backupJob.getJobId() + " downloading");
 
             // Download from source
             try {
                 source.downloadAll(sourceAuthData, sourceProperties, sourceOptions, storage, new JobStatusProgressor(
                         backupJob, "datasource"));
-            } catch (StorageException e) {
-                LOGGER.warn("Job " + backupJob.getJobId() + " faild with message: " + e);
-                //                errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOAD_FAILED, StatusCategory.WARNING, new Date().getTime(), e.getMessage())));
-            } catch (DatasourceException e) {
-                LOGGER.warn("Job " + backupJob.getJobId() + " faild with message: " + e);
-                //                errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOAD_FAILED, StatusCategory.WARNING, new Date().getTime(), e.getMessage())));
+            } catch (StorageException|DatasourceException e) {
+                LOGGER.warn("Job " + backupJob.getJobId() + " failed at download", e);
+                //errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOAD_FAILED, StatusCategory.WARNING, new Date().getTime(), e.getMessage())));
             }
-
+            
             // for each datasource add an entry with bytes it consumed
             long currentSize = storage.getDataObjectSize() - previousSize;
-            //            protocol.addMember(new JobProtocolMemberDTO(protocol.getId(), "po.getProfile().getProfileName()", currentSize));
-            //            protocol.setSpace((int)currentSize);
+            //protocol.addMember(new JobProtocolMemberDTO(protocol.getId(), "po.getProfile().getProfileName()", currentSize));
+            //protocol.setSpace((int)currentSize);
             previousSize = storage.getDataObjectSize();
 
             // make properties global for the action loop. So the plugins can communicate (filesplitt + encryption)
@@ -151,7 +148,7 @@ public class BackupJobRunner {
             params.putAll(sourceAuthData);
 
             // Execute Actions in sequence
-            //            addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.PROCESSING, StatusCategory.INFO, new Date().getTime()));
+            //addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.PROCESSING, StatusCategory.INFO, new Date().getTime()));
             LOGGER.info("Job " + backupJob.getJobId() + " processing");
 
             // if no actions are specified for this backup job,
@@ -209,7 +206,7 @@ public class BackupJobRunner {
                     if ("org.backmeup.filesplitting".equals(actionId)) {
                         // If we do encryption, the Filesplitter needs to run before!
                         action = this.plugins.getAction(actionId);
-                        //						action.doAction(params, storage, persistentJob, new JobStatusProgressor(persistentJob, "filesplittaction"));
+                        //action.doAction(params, storage, persistentJob, new JobStatusProgressor(persistentJob, "filesplittaction"));
                     } else if ("org.backmeup.encryption".equals(actionId)) {
                         // Add the encryption password to the parameters
                         if (authenticationData.getEncryptionPwd() != null) {
@@ -218,7 +215,7 @@ public class BackupJobRunner {
 
                         // After splitting, run encryption
                         action = this.plugins.getAction(actionId);
-                        //						action.doAction(params, storage, persistentJob,	new JobStatusProgressor(persistentJob, "encryptionaction"));
+                        //action.doAction(params, storage, persistentJob,	new JobStatusProgressor(persistentJob, "encryptionaction"));
                     } else if (INDEXER_BACKMEUP_PLUGIN_ID.equals(actionId)) {
                         // Do nothing - we ignore index action declaration in the job description and use
                         // the info from the user properties instead
@@ -237,22 +234,20 @@ public class BackupJobRunner {
 
                     } else {
                         // Only happens in case Job was corrupted in the core - we'll handle that as a fatal error
-                        LOGGER.error("Job " + backupJob.getJobId() + " faild with unsupported action: " + actionId);
-                        //						errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), "Unsupported Action: " + actionId)));
+                        LOGGER.error("Job " + backupJob.getJobId() + " failed with unsupported action: " + actionId);
+                        //errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), "Unsupported Action: " + actionId)));
                     }
                 } catch (ActionException e) {
                     // Should only happen in case of problems in the backmeup-service (file I/O, DB access, etc.)
                     // We'll handle that as a fatal error
-                    LOGGER.error("Job " + backupJob.getJobId() + " faild with message: " + e);
-                    //                    errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
-                } finally {
-
+                    LOGGER.error("Job " + backupJob.getJobId() + " failed at executing an action", e);
+                    //errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
                 }
             }
 
             try {
                 // Upload to Sink
-                //                addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.UPLOADING, StatusCategory.INFO, new Date().getTime()));
+                //addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.UPLOADING, StatusCategory.INFO, new Date().getTime()));
                 LOGGER.info("Job " + backupJob.getJobId() + " uploading");
 
                 sinkAuthData.setProperty("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
@@ -263,11 +258,11 @@ public class BackupJobRunner {
                 sink.upload(sinkAuthData, sinkProperties, sinkOptions, storage, new JobStatusProgressor(backupJob,
                         "datasink"));
 
-                //                addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.SUCCESSFUL, StatusCategory.INFO, new Date().getTime()));
+                //addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.SUCCESSFUL, StatusCategory.INFO, new Date().getTime()));
                 LOGGER.info("Job " + backupJob.getJobId() + " successful");
             } catch (StorageException e) {
-                LOGGER.error("Job " + backupJob.getJobId() + " faild with message: " + e);
-                //                errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
+                LOGGER.error("Job " + backupJob.getJobId() + " failed at upload", e);
+                //errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
             }
 
             // store job protocol within database
@@ -289,9 +284,9 @@ public class BackupJobRunner {
             backupJob.setJobStatus(JobStatus.successful);
 
         } catch (Exception e) {
-            LOGGER.error("Job " + backupJob.getJobId() + " faild with message: " + e);
-            //            storeJobProtocol(backupJob, protocol, 0, false);
-            //            errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
+            LOGGER.error("Job " + backupJob.getJobId() + " failed with unhandled exception", e);
+            //storeJobProtocol(backupJob, protocol, 0, false);
+            //errorStatus.add(addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.JOB_FAILED, StatusCategory.ERROR, new Date().getTime(), e.getMessage())));
 
             int processedItems = 0;
             try {
@@ -404,7 +399,7 @@ public class BackupJobRunner {
         @Override
         public void progress(String message) {
             LOGGER.info("Job {} [{}] {}", this.job.getJobId(), this.category, message);
-            //            addStatusToDb(new JobStatus(job.getJobId(), "info", category, new Date().getTime(),  message));
+            //addStatusToDb(new JobStatus(job.getJobId(), "info", category, new Date().getTime(),  message));
         }
     }
 }
