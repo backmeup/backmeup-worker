@@ -253,7 +253,9 @@ public class BackupJobRunner {
                 sinkAuthData.setProperty("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
                 sinkAuthData.setProperty("org.backmeup.userid", backupJob.getUser().getUserId() + "");
 
-                Properties sinkProperties = new Properties(sinkAuthData);
+                //TODO: Separaete sinkAuthData and sinkProperties
+                Properties sinkProperties = new Properties();
+                sinkProperties.putAll(sinkAuthData);
                 List<String> sinkOptions = new ArrayList<>();
                 sink.upload(sinkAuthData, sinkProperties, sinkOptions, storage, new JobStatusProgressor(backupJob,
                         "datasink"));
