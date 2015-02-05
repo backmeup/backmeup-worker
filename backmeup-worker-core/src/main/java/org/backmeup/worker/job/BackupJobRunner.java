@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.ResourceBundle;
 
@@ -97,7 +98,8 @@ public class BackupJobRunner {
         // Open temporary storage
         try {
             Datasink sink = this.plugins.getDatasink(backupJob.getSink().getPluginId());
-            Properties sinkAuthData = authenticationData.getByProfileId(backupJob.getSink().getProfileId());
+            Properties sinkAuthDataProps = authenticationData.getByProfileId(backupJob.getSink().getProfileId());
+            Map<String, String> sinkAuthData = convertPropertiesToMap(sinkAuthDataProps);
 
             // delete previously stored status, as we only need the latest
             //deleteOldStatus(persistentJob);
@@ -112,7 +114,8 @@ public class BackupJobRunner {
             storage.open(tmpDir);
 
             Datasource source = this.plugins.getDatasource(sourceProfile.getPluginId());
-            Properties sourceAuthData = authenticationData.getByProfileId(sourceProfile.getProfileId());
+            Properties sourceAuthDataProps = authenticationData.getByProfileId(sourceProfile.getProfileId());
+            Map<String, String> sourceAuthData = convertPropertiesToMap(sourceAuthDataProps);
 
             // TODO: These should also come from Keyserver
             List<String> sourceOptions = new ArrayList<String>();
@@ -121,8 +124,7 @@ public class BackupJobRunner {
             }
 
             // TODO: These should also come from Keyserver
-            Properties sourceProperties = new Properties();
-            sourceProperties.putAll(sourceAuthData);
+            Map<String, String> sourceProperties = convertPropertiesToMap(sourceAuthDataProps);
 
             //addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.DOWNLOADING, StatusCategory.INFO, new Date().getTime()));
             LOGGER.info("Job " + backupJob.getJobId() + " downloading");
@@ -143,7 +145,7 @@ public class BackupJobRunner {
             previousSize = storage.getDataObjectSize();
 
             // make properties global for the action loop. So the plugins can communicate (filesplitt + encryption)
-            Properties params = new Properties();
+            Map<String, String> params = new HashMap<>();
             params.putAll(sinkAuthData);
             params.putAll(sourceAuthData);
 
@@ -160,7 +162,8 @@ public class BackupJobRunner {
             // add all properties which have been stored to the params collection
             for (PluginProfileDTO actionProfile : backupJob.getActions()) {
                 //				params.putAll(actionProfile.);
-                Properties actionProperties = authenticationData.getByProfileId(actionProfile.getProfileId());
+                Properties actionPropertiesProps = authenticationData.getByProfileId(actionProfile.getProfileId());
+                Map<String, String> actionProperties = convertPropertiesToMap(actionPropertiesProps);
                 params.putAll(actionProperties);
             }
 
@@ -223,11 +226,11 @@ public class BackupJobRunner {
                             //hand over information from PluginDescribable, etc. to indexAction
                             PluginDescribable pluginDescr = this.plugins.getPluginDescribableById(backupJob.getSink()
                                     .getPluginId());
-                            Properties p = pluginDescr.getMetadata(sinkAuthData);
+                            Map<String, String> p = pluginDescr.getMetadata(sinkAuthData);
                             //add the BMU_filegenerator_530_26_01_2015_12_56 prefix for indexer plugin
-                            p.setProperty("org.backmeup.bmuprefix", getLastSplitElement(tmpDir, "/"));
+                            p.put("org.backmeup.bmuprefix", getLastSplitElement(tmpDir, "/"));
                             //add 
-                            p.setProperty("org.backmeup.thumbnails.tmpdir",
+                            p.put("org.backmeup.thumbnails.tmpdir",
                                     "/data/thumbnails/" + getLastSplitElement(tmpDir, "/"));
                             doIndexing(p, params, storage, backupJob);
                         }
@@ -250,12 +253,11 @@ public class BackupJobRunner {
                 //addStatusToDb(new JobStatus(persistentJob.getJobId(), StatusType.UPLOADING, StatusCategory.INFO, new Date().getTime()));
                 LOGGER.info("Job " + backupJob.getJobId() + " uploading");
 
-                sinkAuthData.setProperty("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
-                sinkAuthData.setProperty("org.backmeup.userid", backupJob.getUser().getUserId() + "");
+                sinkAuthData.put("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
+                sinkAuthData.put("org.backmeup.userid", backupJob.getUser().getUserId() + "");
 
                 //TODO: Separate sinkAuthData and sinkProperties
-                Properties sinkProperties = new Properties();
-                sinkProperties.putAll(sinkAuthData);
+                Map<String, String> sinkProperties = convertPropertiesToMap(sinkAuthDataProps);
                 List<String> sinkOptions = new ArrayList<>();
                 sink.upload(sinkAuthData, sinkProperties, sinkOptions, storage, new JobStatusProgressor(backupJob,
                         "datasink"));
@@ -322,7 +324,7 @@ public class BackupJobRunner {
         this.bmuService.updateBackupJob(backupJob);
     }
 
-    private void doIndexing(Properties properties, Properties params, Storage storage, BackupJobDTO job)
+    private void doIndexing(Map<String, String> properties, Map<String, String> params, Storage storage, BackupJobDTO job)
             throws ActionException {
         // If we do indexing, the Thumbnail renderer needs to run before!
         Action thumbnailAction = this.plugins.getAction("org.backmeup.thumbnail");
@@ -386,6 +388,14 @@ public class BackupJobRunner {
         } else {
             return text;
         }
+    }
+    
+    private Map<String, String> convertPropertiesToMap (Properties properties) {
+        Map<String, String> map = new HashMap<>();
+        for (final String name: properties.stringPropertyNames()) {
+            map.put(name, properties.getProperty(name));
+        }
+        return map;
     }
 
     private class JobStatusProgressor implements Progressable {
