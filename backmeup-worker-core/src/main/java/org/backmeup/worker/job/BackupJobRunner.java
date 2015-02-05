@@ -227,7 +227,7 @@ public class BackupJobRunner {
                             //add the BMU_filegenerator_530_26_01_2015_12_56 prefix for indexer plugin
                             p.setProperty("org.backmeup.bmuprefix", getLastSplitElement(tmpDir, "/"));
                             //add 
-                            p.setProperty("org.backmeup.thumnails.tmpdir",
+                            p.setProperty("org.backmeup.thumbnails.tmpdir",
                                     "/data/thumbnails/" + getLastSplitElement(tmpDir, "/"));
                             doIndexing(p, params, storage, backupJob);
                         }
