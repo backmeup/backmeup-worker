@@ -12,10 +12,8 @@ import java.util.ResourceBundle;
 import org.backmeup.keyserver.client.KeyserverFacade;
 import org.backmeup.keyserver.model.AuthDataResult;
 import org.backmeup.model.Token;
-import org.backmeup.model.dto.BackupJobDTO;
 import org.backmeup.model.dto.BackupJobDTO.JobStatus;
 import org.backmeup.model.dto.BackupJobExecutionDTO;
-import org.backmeup.model.dto.JobProtocolDTO;
 import org.backmeup.model.dto.PluginProfileDTO;
 import org.backmeup.model.spi.PluginDescribable;
 import org.backmeup.plugin.Plugin;
@@ -23,7 +21,6 @@ import org.backmeup.plugin.api.connectors.Action;
 import org.backmeup.plugin.api.connectors.ActionException;
 import org.backmeup.plugin.api.connectors.Datasink;
 import org.backmeup.plugin.api.connectors.Datasource;
-import org.backmeup.plugin.api.connectors.DatasourceException;
 import org.backmeup.plugin.api.connectors.Progressable;
 import org.backmeup.plugin.api.storage.Storage;
 import org.backmeup.plugin.api.storage.StorageException;
@@ -207,27 +204,10 @@ public class BackupJobRunner {
             // For debugging reasons, storage is not closed:
             //storage.close();
 
-            JobProtocolDTO protocol = new JobProtocolDTO();
-            protocol.setTimestamp(new Date().getTime());
-            protocol.setStart(backupJob.getStart().getTime());
-            protocol.setExecutionTime(protocol.getTimestamp() - protocol.getStart());
-            protocol.setSuccessful(true);
-            protocol.setProcessedItems(storage.getDataObjectCount());
-            protocol.setSpace((int)storage.getDataObjectSize());
-
             backupJob.setStatus(JobStatus.successful);
 
         } catch (Exception e) {
             LOGGER.error("Job {} failed with exception: {}", backupJob.getId(), e);
-
-            JobProtocolDTO protocol = new JobProtocolDTO();
-            protocol.setTimestamp(new Date().getTime());
-            protocol.setStart(backupJob.getStart().getTime());
-            protocol.setExecutionTime(protocol.getTimestamp() - protocol.getStart());
-            protocol.setSuccessful(false);
-            protocol.setProcessedItems(storage.getDataObjectCount());
-            protocol.setSpace(0);
-            protocol.setMessage(e.toString());
 
             backupJob.setStatus(JobStatus.error);
         } finally {
