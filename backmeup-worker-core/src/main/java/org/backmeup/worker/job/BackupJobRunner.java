@@ -35,10 +35,6 @@ import org.slf4j.LoggerFactory;
 public class BackupJobRunner {
     private static final Logger LOGGER = LoggerFactory.getLogger(BackupJobRunner.class);
 
-    private static final String ERROR_EMAIL_TEXT = "ERROR_EMAIL_TEXT";
-    private static final String ERROR_EMAIL_SUBJECT = "ERROR_EMAIL_SUBJECT";
-    private static final String ERROR_EMAIL_MIMETYPE = "ERROR_EMAIL_MIMETYPE";
-
     private static final String INDEXING_PLUGIN_OSGI_BUNDLE_ID = "org.backmeup.indexing";
     private static final String INDEXER_BACKMEUP_PLUGIN_ID = "org.backmeup.indexer";
 
@@ -75,7 +71,7 @@ public class BackupJobRunner {
         AuthDataResult authenticationData = this.keyserver.getData(token);
 
         try {            
-            // Open temp local storage-----------------------------------------
+            // Open temporary local storage------------------------------------
             // This storage is used to temporarily store the data while executing the job
             String tmpDir = generateTmpDirName(backupJob, backupJob.getSource());
             storage.open(tmpDir);
@@ -211,6 +207,7 @@ public class BackupJobRunner {
 
             backupJob.setStatus(JobStatus.error);
         } finally {
+            backupJob.setEnd(new Date());
             this.bmuService.updateBackupJobExecution(backupJob);
         }
     }
