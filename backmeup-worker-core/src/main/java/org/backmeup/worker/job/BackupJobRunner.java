@@ -12,7 +12,7 @@ import java.util.ResourceBundle;
 import org.backmeup.keyserver.client.KeyserverFacade;
 import org.backmeup.keyserver.model.AuthDataResult;
 import org.backmeup.model.Token;
-import org.backmeup.model.dto.BackupJobDTO.JobStatus;
+import org.backmeup.model.constants.JobExecutionStatus;
 import org.backmeup.model.dto.BackupJobExecutionDTO;
 import org.backmeup.model.dto.PluginProfileDTO;
 import org.backmeup.model.spi.PluginDescribable;
@@ -62,7 +62,7 @@ public class BackupJobRunner {
         LOGGER.info("Job execution with id {} started for user {}", backupJob.getId(), backupJob.getUser().getUserId());
         
         backupJob.setStart(new Date());
-        backupJob.setStatus(JobStatus.running);
+        backupJob.setStatus(JobExecutionStatus.RUNNING);
 
         this.bmuService.updateBackupJobExecution(backupJob);
 
@@ -200,13 +200,14 @@ public class BackupJobRunner {
             // For debugging reasons, storage is not closed:
             //storage.close();
 
-            backupJob.setStatus(JobStatus.successful);
+            backupJob.setStatus(JobExecutionStatus.SUCESSFUL);
 
         } catch (Exception e) {
             LOGGER.error("Job {} failed with exception: {}", backupJob.getId(), e);
 
-            backupJob.setStatus(JobStatus.error);
+            backupJob.setStatus(JobExecutionStatus.ERROR);
         } finally {
+            LOGGER.info("Job execution with id {} ended with status: {}", backupJob.getId(), backupJob.getStatus());
             backupJob.setEnd(new Date());
             this.bmuService.updateBackupJobExecution(backupJob);
         }
