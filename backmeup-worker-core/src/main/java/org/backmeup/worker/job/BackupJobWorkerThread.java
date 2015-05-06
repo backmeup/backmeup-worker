@@ -19,15 +19,6 @@ public class BackupJobWorkerThread implements Runnable {
 
     private final String jobTempDir;
 
-    private final String keyserverScheme;
-    private final String keyserverHost;
-    private final String keyserverPath;
-
-    private final String bmuServiceScheme;
-    private final String bmuServiceHost;
-    private final String bmuServicePath;
-    private final String bmuServiceAccessToken;
-
     private final Plugin plugins;
     private final KeyserverFacade keyserverClient;
     private final BackmeupService bmuServiceClient;
@@ -37,21 +28,25 @@ public class BackupJobWorkerThread implements Runnable {
             String serviceAccessToken, String keyserverScheme,
             String keyserverHost, String keyserverPath, String jobTempDir,
             String backupName) {
+        this(backupJobId, 
+                plugins, 
+                new BackmeupServiceClient(serviceScheme, serviceHost, servicePath, serviceAccessToken), 
+                new KeyserverClient(keyserverScheme, keyserverHost, keyserverPath), 
+                jobTempDir, 
+                backupName);
+    }
+    
+    public BackupJobWorkerThread(Long backupJobId, Plugin plugins,
+            BackmeupService bmuServiceClient, KeyserverFacade keyserverClient, 
+            String jobTempDir, String backupName) {
         super();
         this.backupJobId = backupJobId;
         this.backupName = backupName;
         this.jobTempDir = jobTempDir;
         this.plugins = plugins;
-        this.keyserverScheme = keyserverScheme;
-        this.keyserverHost = keyserverHost;
-        this.keyserverPath = keyserverPath;
-        this.bmuServiceScheme = serviceScheme;
-        this.bmuServiceHost = serviceHost;
-        this.bmuServicePath = servicePath;
-        this.bmuServiceAccessToken = serviceAccessToken;
 
-        this.keyserverClient = new KeyserverClient(this.keyserverScheme, this.keyserverHost, this.keyserverPath); 
-        this.bmuServiceClient = new BackmeupServiceClient(bmuServiceScheme, bmuServiceHost, bmuServicePath, bmuServiceAccessToken);
+        this.keyserverClient = keyserverClient; 
+        this.bmuServiceClient = bmuServiceClient;
     }
 
     @Override
