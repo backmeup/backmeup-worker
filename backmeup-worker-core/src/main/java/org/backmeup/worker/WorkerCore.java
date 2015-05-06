@@ -1,5 +1,10 @@
 package org.backmeup.worker;
 
+import java.io.File;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.StringTokenizer;
+import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
@@ -7,8 +12,15 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.backmeup.keyserver.client.KeyserverFacade;
+import org.backmeup.keyserver.client.impl.KeyserverClient;
+import org.backmeup.model.dto.WorkerConfigDTO;
+import org.backmeup.model.dto.WorkerConfigDTO.DistributionMechanism;
+import org.backmeup.model.dto.WorkerInfoDTO;
 import org.backmeup.model.exceptions.BackMeUpException;
 import org.backmeup.plugin.Plugin;
+import org.backmeup.service.client.BackmeupService;
+import org.backmeup.service.client.impl.BackmeupServiceClient;
 import org.backmeup.worker.config.Configuration;
 import org.backmeup.worker.job.BackupJobWorkerThread;
 import org.backmeup.worker.job.receiver.JobReceivedEvent;
@@ -22,6 +34,9 @@ import org.slf4j.LoggerFactory;
 
 public class WorkerCore {
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkerCore.class);
+    
+    private final UUID workerId;
+    private String workerName;
 
     private Boolean initialized;
     private WorkerState currentState;
@@ -32,39 +47,37 @@ public class WorkerCore {
     private final AtomicInteger noOfFinishedJobs;
     private final AtomicInteger noOfFaildJobs;
 
-    private final String pluginsDeploymentDir;
-    private final String pluginsTempDir;
-    private final String pluginsExportedPackages;
-    private final Plugin plugins;
-
-    private final String mqHost;
-    private final String mqName;
-    private final int    mqWaitInterval;
-
-    private final String keyserverScheme;
-    private final String keyserverHost;
-    private final String keyserverPath;
-
-    private final String bmuServiceScheme;
-    private final String bmuServiceHost;
-    private final String bmuServicePath;
-    private final String bmuServiceAccessToken;
+    private Plugin plugins;
+    private final KeyserverFacade keyserverClient;
+    private final BackmeupService bmuServiceClient;
 
     private final String jobTempDir;
-    private final String backupName;
+    private String backupName;
 
-    private final RabbitMQJobReceiver jobReceiver;
-    private final BlockingQueue<Runnable> jobQueue;
+    private RabbitMQJobReceiver jobReceiver;
     private final ObservableThreadPoolExecutor executorPool;
 
     // Constructor ------------------------------------------------------------
 
     public WorkerCore() {
-        this.pluginsDeploymentDir = Configuration.getProperty("backmeup.osgi.deploymentDirectory");
-        this.pluginsTempDir = Configuration.getProperty("backmeup.osgi.temporaryDirectory");
-        this.pluginsExportedPackages = Configuration.getProperty("backmeup.osgi.exportedPackages");
-        this.plugins = new PluginImpl(pluginsDeploymentDir, pluginsTempDir, pluginsExportedPackages);
-
+        String wId = Configuration.getProperty("backmeup.worker.id");
+        if (wId != null) {
+            this.workerId = UUID.fromString(wId);
+        } else {
+            this.workerId = UUID.randomUUID();
+        }
+        
+        String wName = Configuration.getProperty("backmeup.worker.name");
+        if (wName != null) {
+            this.workerName = wName;
+        } else {
+            try {
+                this.workerName = InetAddress.getLocalHost().getHostName();
+            } catch (UnknownHostException e) {
+                this.workerName = workerId.toString();
+            }
+        }
+        
         this.maxWorkerThreads = Integer.parseInt(Configuration.getProperty("backmeup.worker.maxParallelJobs"));
 
         this.noOfRunningJobs = new AtomicInteger(0);
@@ -72,24 +85,21 @@ public class WorkerCore {
         this.noOfFinishedJobs = new AtomicInteger(0);
         this.noOfFaildJobs = new AtomicInteger(0);
 
-        this.mqHost = Configuration.getProperty("backmeup.message.queue.host");
-        this.mqName = Configuration.getProperty("backmeup.message.queue.name");
-        this.mqWaitInterval = 500;
+        String keyserverScheme = Configuration.getProperty("keyserver.scheme");
+        String keyserverHost = Configuration.getProperty("keyserver.host");
+        String keyserverPath = Configuration.getProperty("keyserver.path");
+        this.keyserverClient = new KeyserverClient(keyserverScheme, keyserverHost, keyserverPath);
+        
 
-        this.keyserverScheme = Configuration.getProperty("keyserver.scheme");
-        this.keyserverHost = Configuration.getProperty("keyserver.host");
-        this.keyserverPath = Configuration.getProperty("keyserver.path");
+        String bmuServiceScheme = Configuration.getProperty("backmeup.service.scheme");
+        String bmuServiceHost = Configuration.getProperty("backmeup.service.host");
+        String bmuServicePath = Configuration.getProperty("backmeup.service.path");
+        String bmuServiceAccessToken = Configuration.getProperty("backmeup.service.accessToken");
+        this.bmuServiceClient = new BackmeupServiceClient(bmuServiceScheme, bmuServiceHost, bmuServicePath, bmuServiceAccessToken);
 
-        this.bmuServiceScheme = Configuration.getProperty("backmeup.service.scheme");
-        this.bmuServiceHost = Configuration.getProperty("backmeup.service.host");
-        this.bmuServicePath = Configuration.getProperty("backmeup.service.path");
-        this.bmuServiceAccessToken = Configuration.getProperty("backmeup.service.accessToken");
+        this.jobTempDir = Configuration.getProperty("backmeup.worker.workDir");
 
-        this.jobTempDir = Configuration.getProperty("backmeup.job.temporaryDirectory");
-        this.backupName = Configuration.getProperty("backmeup.job.backupname");
-
-        this.jobReceiver = new RabbitMQJobReceiver(mqHost, mqName, mqWaitInterval);
-        this.jobQueue = new ArrayBlockingQueue<>(maxWorkerThreads); // 2
+        BlockingQueue<Runnable> jobQueue = new ArrayBlockingQueue<>(maxWorkerThreads);
         ThreadFactory threadFactory = Executors.defaultThreadFactory();
         this.executorPool = new ObservableThreadPoolExecutor(maxWorkerThreads, maxWorkerThreads, 10, TimeUnit.SECONDS, jobQueue, threadFactory);
 
@@ -132,10 +142,48 @@ public class WorkerCore {
     public void initialize() {
         LOGGER.info("Initializing backmeup-worker");
         boolean errorsDuringInit = false;
-
+        
+        WorkerInfoDTO workerInfo = getWorkerInfo();
+        WorkerConfigDTO resp = bmuServiceClient.initializeWorker(workerInfo);
+        
+        this.backupName = resp.getBackupNameTemplate();
+        
+        if (resp.getDistributionMechanism() == DistributionMechanism.QUEUE) {
+            final StringTokenizer tokenizer = new StringTokenizer(resp.getConnectionInfo(), ";");
+            final String mqHost = tokenizer.nextToken();
+            final String mqName = tokenizer.nextToken();
+            
+            this.jobReceiver = new RabbitMQJobReceiver(mqHost, mqName, 500);
+            jobReceiver.initialize();
+            jobReceiver.addJobReceivedListener(new JobReceivedListener() {
+                @Override
+                public void jobReceived(JobReceivedEvent jre) {
+                    executeBackupJob(jre);
+                }
+            });
+        } else {
+            // DistributionMechanism not supported
+            errorsDuringInit = true;
+        }
+        
+        // Initialize plugins infrastructure and load all plugins
+        String pluginsDeploymentDir = Configuration.getProperty("backmeup.osgi.deploymentDirectory");
+        String pluginsTempDir = Configuration.getProperty("backmeup.osgi.temporaryDirectory");
+        String pluginsExportedPackages = resp.getPluginsExportedPackages();
+        this.plugins = new PluginImpl(pluginsDeploymentDir, pluginsTempDir, pluginsExportedPackages);
+        plugins.startup();
+        
+        // TODO: Fix workaround. Startup method should block until plugin
+        // infrastructure is fully initialized and all plugins are loaded
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            // Nothing to do
+        }
+        
         executorPool.addThreadPoolListener(new ThreadPoolListener() {
             @Override
-            public void terminated() {				
+            public void terminated() {              
             }
 
             @Override
@@ -148,17 +196,7 @@ public class WorkerCore {
                 jobThreadAterExecute(r, t);
             }
         });
-
-        plugins.startup();
-
-        jobReceiver.initialize();
-        jobReceiver.addJobReceivedListener(new JobReceivedListener() {
-            @Override
-            public void jobReceived(JobReceivedEvent jre) {
-                executeBackupJob(jre);
-            }
-        });
-
+        
         if(!errorsDuringInit) {
             setCurrentState(WorkerState.Idle);
             initialized = true;
@@ -171,7 +209,6 @@ public class WorkerCore {
         }
 
         jobReceiver.start();
-
     }
 
     public void shutdown() {
@@ -191,12 +228,8 @@ public class WorkerCore {
         }
 
         Long jobId = jre.getJobId();
-        Runnable backupJobWorker = new BackupJobWorkerThread(
-                jobId, plugins, 
-                bmuServiceScheme, bmuServiceHost, bmuServicePath, bmuServiceAccessToken,
-                keyserverScheme, keyserverHost, keyserverPath,
-                jobTempDir, backupName);
-        executorPool.execute(backupJobWorker);
+        Runnable backupJobWorker = new BackupJobWorkerThread(jobId, plugins, bmuServiceClient, keyserverClient, jobTempDir, backupName);
+        executorPool.execute(backupJobWorker);   
     }
 
     private void jobThreadBeforeExecute(Thread t, Runnable r) {
@@ -216,6 +249,22 @@ public class WorkerCore {
             setCurrentState(WorkerState.Idle);
         }
         jobReceiver.setPaused(false);
+    }
+    
+    private WorkerInfoDTO getWorkerInfo() {
+        WorkerInfoDTO workerInfo = new WorkerInfoDTO();
+        
+        workerInfo.setWorkerId(workerId);
+        workerInfo.setWorkerName(workerName);
+        workerInfo.setOsName(System.getProperty("os.name"));
+        workerInfo.setOsVersion(System.getProperty("os.version"));
+        workerInfo.setOsArchitecture(System.getProperty("os.arch"));
+        workerInfo.setTotalMemory(Runtime.getRuntime().totalMemory());
+        workerInfo.setTotalCPUCores(Runtime.getRuntime().availableProcessors());
+        long totalSpace = new File(jobTempDir).getTotalSpace();
+        workerInfo.setTotalSpace(totalSpace);
+        
+        return workerInfo;
     }
 
     // Nested classes and enums -----------------------------------------------
