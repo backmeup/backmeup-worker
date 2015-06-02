@@ -9,13 +9,15 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.ResourceBundle;
 
-import org.backmeup.keyserver.client.KeyserverFacade;
-import org.backmeup.keyserver.model.AuthDataResult;
+import org.backmeup.keyserver.client.KeyserverClient;
+import org.backmeup.keyserver.model.Token.Kind;
+import org.backmeup.keyserver.model.dto.TokenDTO;
 import org.backmeup.model.Token;
 import org.backmeup.model.constants.JobExecutionStatus;
 import org.backmeup.model.dto.BackupJobExecutionDTO;
 import org.backmeup.model.dto.PluginProfileDTO;
 import org.backmeup.model.spi.PluginDescribable;
+import org.backmeup.model.utils.Serialization;
 import org.backmeup.plugin.Plugin;
 import org.backmeup.plugin.api.connectors.Action;
 import org.backmeup.plugin.api.connectors.ActionException;
@@ -42,12 +44,12 @@ public class BackupJobRunner {
     private final String backupName;
 
     private final Plugin plugins;
-    private final KeyserverFacade keyserver;
+    private final KeyserverClient keyserver;
     private final BackmeupService bmuService;
 
     private final ResourceBundle textBundle = ResourceBundle.getBundle("BackupJobRunner");
 
-    public BackupJobRunner(Plugin plugins, KeyserverFacade keyserver, BackmeupService bmuService, String jobTempDir,
+    public BackupJobRunner(Plugin plugins, KeyserverClient keyserver, BackmeupService bmuService, String jobTempDir,
             String backupName) {
         this.plugins = plugins;
         this.keyserver = keyserver;
@@ -67,8 +69,7 @@ public class BackupJobRunner {
         this.bmuService.updateBackupJobExecution(backupJob);
 
         // Get plugin data from keyserver 
-        Token token = new Token(backupJob.getToken().getToken(), backupJob.getToken().getTokenId(), new Date().getTime());
-        AuthDataResult authenticationData = this.keyserver.getData(token);
+        TokenDTO token = new TokenDTO(Kind.INTERNAL, backupJob.getToken());
 
         try {            
             // Open temporary local storage------------------------------------
@@ -79,11 +80,14 @@ public class BackupJobRunner {
             // Prepare source plugin data -------------------------------------
             
             Datasource source = this.plugins.getDatasource(backupJob.getSource().getPluginId());
-            Properties sourceAuthDataProps = authenticationData.getByProfileId(backupJob.getSource().getProfileId());
-            Map<String, String> sourceAuthData = convertPropertiesToMap(sourceAuthDataProps);
+            Map<String, String> sourceAuthData = new HashMap<String, String>();
+            if (backupJob.getSource().getAuthData() != null) {
+                String encodedAuthData = this.keyserver.getPluginData(token, backupJob.getSource().getAuthData().getId().toString());
+                sourceAuthData = Serialization.getEncodedStringAsObject(encodedAuthData, HashMap.class);
+            }
             
-            // TODO: These should also come from Keyserver
-            Map<String, String> sourceProperties = convertPropertiesToMap(sourceAuthDataProps);
+            String encodedSourceProperties = this.keyserver.getPluginData(token, String.valueOf(backupJob.getSource().getProfileId()));
+            Map<String, String> sourceProperties = Serialization.getEncodedStringAsObject(encodedSourceProperties, HashMap.class);
             
             // TODO: These should also come from Keyserver
             List<String> sourceOptions = new ArrayList<String>();
@@ -94,15 +98,18 @@ public class BackupJobRunner {
             // Prepare sink plugin data ---------------------------------------
             
             Datasink sink = this.plugins.getDatasink(backupJob.getSink().getPluginId());
-            Properties sinkAuthDataProps = authenticationData.getByProfileId(backupJob.getSink().getProfileId());
-            Map<String, String> sinkAuthData = convertPropertiesToMap(sinkAuthDataProps);
+            Map<String, String> sinkAuthData = new HashMap<String, String>();
+            if (backupJob.getSink().getAuthData() != null) {
+                String encodedAuthData = this.keyserver.getPluginData(token, backupJob.getSink().getAuthData().getId().toString());
+                sinkAuthData = Serialization.getEncodedStringAsObject(encodedAuthData, HashMap.class);
+            }
             
-            sinkAuthData.put("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
-            sinkAuthData.put("org.backmeup.userid", backupJob.getUser().getUserId() + "");
+//            sinkAuthData.put("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
+//            sinkAuthData.put("org.backmeup.userid", backupJob.getUser().getUserId() + "");
 
-            // TODO: These should also come from Keyserver
-            Map<String, String> sinkProperties = convertPropertiesToMap(sinkAuthDataProps);
-
+            String encodedSinkProperties = this.keyserver.getPluginData(token, String.valueOf(backupJob.getSink().getProfileId()));
+            Map<String, String> sinkProperties = Serialization.getEncodedStringAsObject(encodedSinkProperties, HashMap.class);
+            
             // TODO: These should also come from Keyserver
             List<String> sinkOptions = new ArrayList<String>();
             if (backupJob.getSink().getOptions() != null) {
@@ -129,9 +136,9 @@ public class BackupJobRunner {
             
             // add all properties which have been stored to the params collection
             for (PluginProfileDTO actionProfile : backupJob.getActions()) {
-                Properties actionPropertiesProps = authenticationData.getByProfileId(actionProfile.getProfileId());
-                Map<String, String> actionProperties = convertPropertiesToMap(actionPropertiesProps);
-                params.putAll(actionProperties);
+//                Properties actionPropertiesProps = authenticationData.getByProfileId(actionProfile.getProfileId());
+//                Map<String, String> actionProperties = convertPropertiesToMap(actionPropertiesProps);
+//                params.putAll(actionProperties);
             }
 
             // Execute actions in sequence ------------------------------------
