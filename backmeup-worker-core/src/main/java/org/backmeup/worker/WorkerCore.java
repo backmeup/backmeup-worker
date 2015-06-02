@@ -12,8 +12,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.backmeup.keyserver.client.KeyserverFacade;
-import org.backmeup.keyserver.client.impl.KeyserverClient;
+import org.backmeup.keyserver.client.KeyserverClient;
 import org.backmeup.model.dto.WorkerConfigDTO;
 import org.backmeup.model.dto.WorkerConfigDTO.DistributionMechanism;
 import org.backmeup.model.dto.WorkerInfoDTO;
@@ -48,7 +47,7 @@ public class WorkerCore {
     private final AtomicInteger noOfFaildJobs;
 
     private Plugin plugins;
-    private final KeyserverFacade keyserverClient;
+    private final KeyserverClient keyserverClient;
     private final BackmeupService bmuServiceClient;
 
     private final String jobTempDir;
@@ -85,10 +84,10 @@ public class WorkerCore {
         this.noOfFinishedJobs = new AtomicInteger(0);
         this.noOfFaildJobs = new AtomicInteger(0);
 
-        String keyserverScheme = Configuration.getProperty("keyserver.scheme");
-        String keyserverHost = Configuration.getProperty("keyserver.host");
-        String keyserverPath = Configuration.getProperty("keyserver.path");
-        this.keyserverClient = new KeyserverClient(keyserverScheme, keyserverHost, keyserverPath);
+        String keyserverBaseUrl = Configuration.getProperty("backmeup.keyserver.baseUrl");
+        String workerAppId = Configuration.getProperty("backmeup.worker.appId");
+        String workerAppSecret = Configuration.getProperty("backmeup.worker.appSecret");
+        this.keyserverClient = new KeyserverClient(keyserverBaseUrl, workerAppId, workerAppSecret);
         
 
         String bmuServiceScheme = Configuration.getProperty("backmeup.service.scheme");

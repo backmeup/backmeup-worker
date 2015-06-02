@@ -1,7 +1,6 @@
 package org.backmeup.worker.job;
 
-import org.backmeup.keyserver.client.KeyserverFacade;
-import org.backmeup.keyserver.client.impl.KeyserverClient;
+import org.backmeup.keyserver.client.KeyserverClient;
 import org.backmeup.plugin.Plugin;
 import org.backmeup.plugin.api.storage.Storage;
 import org.backmeup.service.client.BackmeupService;
@@ -20,7 +19,7 @@ public class BackupJobWorkerThread implements Runnable {
     private final String jobTempDir;
 
     private final Plugin plugins;
-    private final KeyserverFacade keyserverClient;
+    private final KeyserverClient keyserverClient;
     private final BackmeupService bmuServiceClient;
 
     public BackupJobWorkerThread(Long backupJobId, Plugin plugins,
@@ -37,7 +36,7 @@ public class BackupJobWorkerThread implements Runnable {
     }
     
     public BackupJobWorkerThread(Long backupJobId, Plugin plugins,
-            BackmeupService bmuServiceClient, KeyserverFacade keyserverClient, 
+            BackmeupService bmuServiceClient, KeyserverClient keyserverClient, 
             String jobTempDir, String backupName) {
         super();
         this.backupJobId = backupJobId;
