@@ -207,7 +207,7 @@ public class BackupJobRunner {
             // For debugging reasons, storage is not closed:
             //storage.close();
 
-            backupJob.setStatus(JobExecutionStatus.SUCESSFUL);
+            backupJob.setStatus(JobExecutionStatus.SUCCESSFUL);
 
         } catch (Exception e) {
             LOGGER.error("Job {} failed with exception: {}", backupJob.getId(), e);
