@@ -104,8 +104,8 @@ public class BackupJobRunner {
                 sinkAuthData = Serialization.getEncodedStringAsObject(encodedAuthData, HashMap.class);
             }
             
-//            sinkAuthData.put("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
-//            sinkAuthData.put("org.backmeup.userid", backupJob.getUser().getUserId() + "");
+            sinkAuthData.put("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
+            sinkAuthData.put("org.backmeup.userid", backupJob.getUser().getUserId() + "");
 
             String encodedSinkProperties = this.keyserver.getPluginData(token, String.valueOf(backupJob.getSink().getProfileId()));
             Map<String, String> sinkProperties = Serialization.getEncodedStringAsObject(encodedSinkProperties, HashMap.class);
