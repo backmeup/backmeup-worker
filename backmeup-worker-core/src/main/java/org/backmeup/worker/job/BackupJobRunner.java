@@ -12,6 +12,7 @@ import java.util.ResourceBundle;
 import org.backmeup.keyserver.client.KeyserverClient;
 import org.backmeup.keyserver.model.Token.Kind;
 import org.backmeup.keyserver.model.dto.TokenDTO;
+import org.backmeup.model.Profile;
 import org.backmeup.model.Token;
 import org.backmeup.model.constants.JobExecutionStatus;
 import org.backmeup.model.dto.BackupJobExecutionDTO;
@@ -87,13 +88,13 @@ public class BackupJobRunner {
             }
             
             String encodedSourceProperties = this.keyserver.getPluginData(token, String.valueOf(backupJob.getSource().getProfileId()));
-            Map<String, String> sourceProperties = Serialization.getEncodedStringAsObject(encodedSourceProperties, HashMap.class);
+            Profile sourceProfile = new Profile();
+            sourceProfile.setPropertiesAndOptionsFromEncodedString(encodedSourceProperties);
+            Map<String, String> sourceProperties = sourceProfile.getProperties();
+            if(sourceProperties == null) sourceProperties = new HashMap<String, String>();
+            List<String> sourceOptions = sourceProfile.getOptions();
+            if(sourceOptions == null) sourceOptions = new ArrayList<String>();
             
-            // TODO: These should also come from Keyserver
-            List<String> sourceOptions = new ArrayList<String>();
-            if (backupJob.getSource().getOptions() != null) {
-                sourceOptions.addAll(backupJob.getSource().getOptions());
-            }
 
             // Prepare sink plugin data ---------------------------------------
             
@@ -108,13 +109,13 @@ public class BackupJobRunner {
             sinkAuthData.put("org.backmeup.userid", backupJob.getUser().getUserId() + "");
 
             String encodedSinkProperties = this.keyserver.getPluginData(token, String.valueOf(backupJob.getSink().getProfileId()));
-            Map<String, String> sinkProperties = Serialization.getEncodedStringAsObject(encodedSinkProperties, HashMap.class);
+            Profile sinkProfile = new Profile();
+            sinkProfile.setPropertiesAndOptionsFromEncodedString(encodedSinkProperties);
+            Map<String, String> sinkProperties = sinkProfile.getProperties();
+            if(sinkProperties == null) sinkProperties = new HashMap<String, String>();
+            List<String> sinkOptions = sinkProfile.getOptions();
+            if(sinkOptions == null) sinkOptions = new ArrayList<String>();
             
-            // TODO: These should also come from Keyserver
-            List<String> sinkOptions = new ArrayList<String>();
-            if (backupJob.getSink().getOptions() != null) {
-                sinkOptions.addAll(backupJob.getSink().getOptions());
-            }
 
             // Download from source -------------------------------------------
             LOGGER.info("Job {} downloading", backupJob.getId());
