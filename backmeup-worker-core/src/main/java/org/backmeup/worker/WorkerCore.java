@@ -103,7 +103,7 @@ public class WorkerCore {
         this.executorPool = new ObservableThreadPoolExecutor(maxWorkerThreads, maxWorkerThreads, 10, TimeUnit.SECONDS, jobQueue, threadFactory);
 
         this.initialized = false;
-        setCurrentState(WorkerState.Offline);
+        setCurrentState(WorkerState.OFFLINE);
     }
 
     // Getters and setters ----------------------------------------------------
@@ -182,7 +182,8 @@ public class WorkerCore {
         
         executorPool.addThreadPoolListener(new ThreadPoolListener() {
             @Override
-            public void terminated() {              
+            public void terminated() {
+                // Nothing to do here
             }
 
             @Override
@@ -197,7 +198,7 @@ public class WorkerCore {
         });
         
         if(!errorsDuringInit) {
-            setCurrentState(WorkerState.Idle);
+            setCurrentState(WorkerState.IDLE);
             initialized = true;
         }
     }
@@ -233,7 +234,7 @@ public class WorkerCore {
 
     private void jobThreadBeforeExecute(Thread t, Runnable r) {
         this.noOfRunningJobs.getAndIncrement();
-        setCurrentState(WorkerState.Busy);
+        setCurrentState(WorkerState.BUSY);
     }
 
     private void jobThreadAterExecute(Runnable r, Throwable t) {
@@ -245,7 +246,7 @@ public class WorkerCore {
 
         this.noOfRunningJobs.getAndDecrement();
         if (noOfRunningJobs.get() == 0) {
-            setCurrentState(WorkerState.Idle);
+            setCurrentState(WorkerState.IDLE);
         }
         jobReceiver.setPaused(false);
     }
@@ -269,8 +270,8 @@ public class WorkerCore {
     // Nested classes and enums -----------------------------------------------
 
     public enum WorkerState {
-        Offline, // Not connected to dependent services
-        Idle,    // No jobs to execute
-        Busy    // Jobs are currently running on worker
+        OFFLINE, // Not connected to dependent services
+        IDLE,    // No jobs to execute
+        BUSY     // Jobs are currently running on worker
     }
 }

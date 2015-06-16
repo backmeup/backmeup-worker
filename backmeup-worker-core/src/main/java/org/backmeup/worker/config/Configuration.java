@@ -20,6 +20,10 @@ public final class Configuration {
             throw new ExceptionInInitializerError(e);
         }
     }
+    
+    private Configuration() {
+        // Utility classes should not have public constructor
+    }
 
     public static String getProperty(String key) {
         return PROPERTIES.getProperty(key);
