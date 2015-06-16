@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.felix.framework.FrameworkFactory;
+import org.backmeup.model.exceptions.BackMeUpException;
 import org.backmeup.model.exceptions.PluginException;
 import org.backmeup.model.exceptions.PluginUnavailableException;
 import org.backmeup.model.spi.PluginDescribable;
@@ -58,6 +59,7 @@ import org.slf4j.LoggerFactory;
 @SuppressWarnings("rawtypes")
 public class PluginImpl implements Plugin {
     private static final Logger LOGGER = LoggerFactory.getLogger(PluginImpl.class);
+    private static final String PLUGIN_FILTER_FORMAT = "(name=%s)";
 
     private final String deploymentDirPath;
 
@@ -115,6 +117,24 @@ public class PluginImpl implements Plugin {
     // Public methods ---------------------------------------------------------
 
     @Override
+    public boolean isPluginAvailable(String pluginId) {
+        ServiceReference ref = getReference(PluginDescribable.class, pluginId);
+        return ref != null;
+    }
+
+    @Override
+    public boolean hasAuthorizable(String pluginId) {
+        ServiceReference ref = getReference(Authorizable.class, pluginId);
+        return ref != null;
+    }
+
+    @Override
+    public boolean hasValidator(String pluginId) {
+        ServiceReference ref = getReference(Validationable.class, pluginId);
+        return ref != null;
+    }
+
+    @Override
     public List<PluginDescribable> getActions() {
         return this.getDescribableForType(PluginType.Action);
     }
@@ -130,55 +150,37 @@ public class PluginImpl implements Plugin {
     }
 
     @Override
-    public boolean isPluginAvailable(String pluginId) {
-        ServiceReference ref = getReference(PluginDescribable.class, "(name=" + pluginId + ")");
-        return ref != null;
-    }
-
-    @Override
-    public boolean hasAuthorizable(String pluginId) {
-        ServiceReference ref = getReference(Authorizable.class, "(name=" + pluginId + ")");
-        return ref != null;
-    }
-
-    @Override
-    public boolean hasValidator(String pluginId) {
-        ServiceReference ref = getReference(Validationable.class, "(name=" + pluginId + ")");
-        return ref != null;
-    }
-
-    @Override
     public PluginDescribable getPluginDescribableById(String sourceSinkId) {
-        return service(PluginDescribable.class, "(name=" + sourceSinkId + ")");
+        return service(PluginDescribable.class, sourceSinkId);
     }
 
     @Override
     public Datasource getDatasource(String sourceId) {
-        return service(Datasource.class, "(name=" + sourceId + ")");
+        return service(Datasource.class, sourceId);
     }
 
     @Override
     public Datasink getDatasink(String sinkId) {
-        return service(Datasink.class, "(name=" + sinkId + ")");
+        return service(Datasink.class, sinkId);
     }
 
     @Override
     public Action getAction(String actionId) {
-        return service(Action.class, "(name=" + actionId + ")");
+        return service(Action.class, actionId);
     }
 
     @Override
     public Authorizable getAuthorizable(String sourceSinkId) {
-        return service(Authorizable.class, "(name=" + sourceSinkId + ")");
+        return service(Authorizable.class, sourceSinkId);
     }
 
     @Override
     public Authorizable getAuthorizable(String sourceSinkId, AuthorizationType authType) {
         switch (authType) {
         case OAuth:
-            return service(OAuthBasedAuthorizable.class, "(name=" + sourceSinkId + ")");
+            return service(OAuthBasedAuthorizable.class, sourceSinkId);
         case InputBased:
-            return service(InputBasedAuthorizable.class, "(name=" + sourceSinkId + ")");
+            return service(InputBasedAuthorizable.class, sourceSinkId);
         default:
             throw new IllegalArgumentException("unknown authorization type " + authType);
         }
@@ -186,7 +188,7 @@ public class PluginImpl implements Plugin {
 
     @Override
     public Validationable getValidator(String sourceSinkId) {
-        return service(Validationable.class, "(name=" + sourceSinkId + ")");
+        return service(Validationable.class, sourceSinkId);
     }
 
     public <T> T service(final Class<T> service) {
@@ -194,10 +196,10 @@ public class PluginImpl implements Plugin {
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T service(final Class<T> service, final String filter) {
-        ServiceReference ref = getReference(service, filter);
+    public <T> T service(final Class<T> service, final String pluginId) {
+        ServiceReference ref = getReference(service, pluginId);
         if (ref == null) {
-            throw new PluginUnavailableException(filter);
+            throw new PluginUnavailableException(pluginId);
         }
         bundleContext().ungetService(ref);
         return (T) Proxy.newProxyInstance(PluginImpl.class.getClassLoader(),
@@ -205,23 +207,16 @@ public class PluginImpl implements Plugin {
 
             @Override
             public Object invoke(Object o, Method method, Object[] os) throws Throwable {
-                ServiceReference serviceRef = getReference(service, filter);
+                ServiceReference serviceRef = getReference(service, pluginId);
                 if (serviceRef == null) {
-                    throw new PluginUnavailableException(filter);
+                    throw new PluginUnavailableException(pluginId);
                 }
                 Object instance = bundleContext().getService(serviceRef);
-
-                if (instance == null) {
-                    // This might happen if <packaging>bundle</packaging> is missing in pom.xml
-                    throw new NullPointerException();
-                }
                 Object ret = null;
                 try {
                     ret = method.invoke(instance, os);
                 } catch (Exception e) {
-                    throw new PluginException(filter,
-                            "An exception occured during execution of the method "
-                                    + method.getName(), e);
+                    throw new PluginException(pluginId, "An exception occured during execution of the method " + method.getName(), e);
                 } finally {
                     bundleContext().ungetService(serviceRef);
                 }
@@ -290,18 +285,17 @@ public class PluginImpl implements Plugin {
         return osgiFramework.getBundleContext();
     }
 
-    private <T> ServiceReference getReference(final Class<T> service, final String filter) {
+    private <T> ServiceReference getReference(final Class<T> service, final String pluginId) {
         ServiceReference ref = null;
-        if (filter == null) {
+        if (pluginId == null) {
             ref = bundleContext().getServiceReference(service.getName());
-
         } else {
             ServiceReference[] refs;
+            String filter = String.format(PLUGIN_FILTER_FORMAT, pluginId);
             try {
                 refs = bundleContext().getServiceReferences(service.getName(), filter);
             } catch (InvalidSyntaxException e) {
-                LOGGER.error("", e);
-                throw new IllegalArgumentException(String.format("The filter '%s' is mallformed.", filter));
+                throw new IllegalArgumentException(String.format("The filter '%s' is mallformed.", filter), e);
             }
             if (refs != null && refs.length > 0) {
                 ref = refs[0];
@@ -346,7 +340,7 @@ public class PluginImpl implements Plugin {
             osgiFramework.start();
         } catch (Exception e) {
             LOGGER.error("", e);
-            throw new RuntimeException(e);
+            throw new BackMeUpException(e);
         }
     }
 
