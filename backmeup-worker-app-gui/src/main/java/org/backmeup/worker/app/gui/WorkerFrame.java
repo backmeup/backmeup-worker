@@ -38,12 +38,14 @@ import java.awt.Color;
 import java.awt.SystemColor;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.IOException;
 
 public class WorkerFrame extends JFrame {
-    private static final Logger LOGGER = LoggerFactory
-            .getLogger(WorkerFrame.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(WorkerFrame.class);
 
     private static final long serialVersionUID = 1L;
+    private static final String PROP_SWING_LAF = "swing.defaultlaf";
+    private static final String PROP_OS_NAME = "os.name";
     private static final int TAB_CONFIG = 2;
 
     private int noOfCurrentJobs;
@@ -54,10 +56,10 @@ public class WorkerFrame extends JFrame {
     private JPanel contentPane;
     private JTabbedPane tabbedPane;
     private JPanel pOverview;
-    private JPanel panel_1;
+    private JPanel panel1;
     private JLabel label;
     private JLabel lblWorkerState;
-    private JPanel panel_2;
+    private JPanel panel2;
     private JLabel lblcurrentjobs;
     private JLabel lblCurrentJobsCount;
     private JPanel pCurrentJobsBar;
@@ -91,35 +93,6 @@ public class WorkerFrame extends JFrame {
     private BarMeter bmFailedJobs;
     private JScrollPane scLogs;
     private JTextArea txtLogs;
-
-    /**
-     * Launch the application.
-     */
-    public static void main(String[] args) {
-        EventQueue.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    if (System.getProperty("os.name").startsWith("Windows")) {
-                        System.setProperty("swing.defaultlaf",
-                                "com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
-                    } else if (System.getProperty("os.name")
-                            .startsWith("Linux")) {
-                        System.setProperty("swing.defaultlaf",
-                                "com.sun.java.swing.plaf.gtk.GTKLookAndFeel");
-                    } else { // Assume OS X
-                        System.setProperty("swing.defaultlaf",
-                                "com.sun.java.swing.plaf.mac.MacLookAndFeel");
-                    }
-
-                    WorkerFrame frame = new WorkerFrame();
-                    frame.setVisible(true);
-                } catch (Exception e) {
-                    LOGGER.error("", e);
-                }
-            }
-        });
-    }
 
     /**
      * Create the frame.
@@ -159,28 +132,28 @@ public class WorkerFrame extends JFrame {
         tabbedPane.addTab("Overview", null, pOverview, null);
         pOverview.setLayout(new BorderLayout(0, 0));
 
-        panel_1 = new JPanel();
-        pOverview.add(panel_1, BorderLayout.NORTH);
-        panel_1.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
+        panel1 = new JPanel();
+        pOverview.add(panel1, BorderLayout.NORTH);
+        panel1.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
 
         label = new JLabel("Worker State:");
-        panel_1.add(label);
+        panel1.add(label);
 
         lblWorkerState = new JLabel("Offline");
-        panel_1.add(lblWorkerState);
+        panel1.add(lblWorkerState);
 
-        panel_2 = new JPanel();
-        pOverview.add(panel_2, BorderLayout.CENTER);
-        panel_2.setLayout(new MigLayout("", "[][][grow]", "[][][][]"));
+        panel2 = new JPanel();
+        pOverview.add(panel2, BorderLayout.CENTER);
+        panel2.setLayout(new MigLayout("", "[][][grow]", "[][][][]"));
 
         lblcurrentjobs = new JLabel("Current Jobs:");
-        panel_2.add(lblcurrentjobs, "cell 0 0");
+        panel2.add(lblcurrentjobs, "cell 0 0");
 
         lblCurrentJobsCount = new JLabel("1");
-        panel_2.add(lblCurrentJobsCount, "cell 1 0");
+        panel2.add(lblCurrentJobsCount, "cell 1 0");
 
         pCurrentJobsBar = new JPanel();
-        panel_2.add(pCurrentJobsBar, "cell 2 0,grow");
+        panel2.add(pCurrentJobsBar, "cell 2 0,grow");
         pCurrentJobsBar.setLayout(new BorderLayout(0, 0));
 
         bmCurrentJobs = new BarMeter();
@@ -191,13 +164,13 @@ public class WorkerFrame extends JFrame {
         pCurrentJobsBar.add(bmCurrentJobs);
 
         lblFetchedJobs = new JLabel("Fetched Jobs:");
-        panel_2.add(lblFetchedJobs, "cell 0 1");
+        panel2.add(lblFetchedJobs, "cell 0 1");
 
         lblFinishedJobsCount = new JLabel("1");
-        panel_2.add(lblFinishedJobsCount, "cell 1 2");
+        panel2.add(lblFinishedJobsCount, "cell 1 2");
 
         pFinishedJobsBar = new JPanel();
-        panel_2.add(pFinishedJobsBar, "cell 2 2,grow");
+        panel2.add(pFinishedJobsBar, "cell 2 2,grow");
         pFinishedJobsBar.setLayout(new BorderLayout(0, 0));
 
         bmFinishedJobs = new BarMeter();
@@ -208,13 +181,13 @@ public class WorkerFrame extends JFrame {
         pFinishedJobsBar.add(bmFinishedJobs);
 
         lblFinishedJobs = new JLabel("Finished Jobs:");
-        panel_2.add(lblFinishedJobs, "cell 0 2");
+        panel2.add(lblFinishedJobs, "cell 0 2");
 
         lblFetchedJobsCount = new JLabel("1");
-        panel_2.add(lblFetchedJobsCount, "cell 1 1");
+        panel2.add(lblFetchedJobsCount, "cell 1 1");
 
         pFetchedJobsBar = new JPanel();
-        panel_2.add(pFetchedJobsBar, "cell 2 1,grow");
+        panel2.add(pFetchedJobsBar, "cell 2 1,grow");
         pFetchedJobsBar.setLayout(new BorderLayout(0, 0));
 
         bmFetchedJobs = new BarMeter();
@@ -225,13 +198,13 @@ public class WorkerFrame extends JFrame {
         pFetchedJobsBar.add(bmFetchedJobs, BorderLayout.CENTER);
 
         lblFailedJobs = new JLabel("Failed Jobs:");
-        panel_2.add(lblFailedJobs, "cell 0 3");
+        panel2.add(lblFailedJobs, "cell 0 3");
 
         lblFailedJobsCount = new JLabel("1");
-        panel_2.add(lblFailedJobsCount, "cell 1 3");
+        panel2.add(lblFailedJobsCount, "cell 1 3");
 
         pFailedJobsBar = new JPanel();
-        panel_2.add(pFailedJobsBar, "cell 2 3,grow");
+        panel2.add(pFailedJobsBar, "cell 2 3,grow");
         pFailedJobsBar.setLayout(new BorderLayout(0, 0));
 
         bmFailedJobs = new BarMeter();
@@ -304,48 +277,23 @@ public class WorkerFrame extends JFrame {
     private void tabChanged(ChangeEvent e) {
         JTabbedPane sourceTabbedPane = (JTabbedPane) e.getSource();
         int index = sourceTabbedPane.getSelectedIndex();
-        if (index == TAB_CONFIG) {
-            if (!configLoaded) {
-                new SwingWorker<Void, String>() {
-                    @Override
-                    protected Void doInBackground() throws Exception {
-                        Properties workerProperties = new Properties();
-                        ClassLoader loader = Thread.currentThread()
-                                .getContextClassLoader();
-                        workerProperties
-                                .load(loader
-                                        .getResourceAsStream("backmeup-worker.properties"));
+        if ((index == TAB_CONFIG) && (!configLoaded)) {
+            new SwingWorker<Void, String>() {
+                @Override
+                protected Void doInBackground() throws IOException {
+                    String config = getWorkerPropertiesAsString();
+                    publish(config);
+                    return null;
+                }
 
-                        StringBuilder sb = new StringBuilder();
-                        SortedSet<String> configLines = new TreeSet<>();
+                @Override
+                protected void process(List<String> chunks) {
+                    txtConfig.setText(chunks.get(0));
+                    configLoaded = true;
+                }
 
-                        for (Map.Entry<Object, Object> workerProperty : workerProperties
-                                .entrySet()) {
-                            String key = (String) workerProperty.getKey();
-                            String value = (String) workerProperty.getValue();
-
-                            String line = key + ": " + value + "\n";
-                            configLines.add(line);
-                        }
-
-                        for (String line : configLines) {
-                            sb.append(line);
-                        }
-
-                        publish(sb.toString());
-                        return null;
-                    }
-
-                    @Override
-                    protected void process(List<String> chunks) {
-                        txtConfig.setText(chunks.get(0));
-                        configLoaded = true;
-                    }
-
-                }.execute();
-            }
+            }.execute();
         }
-
     }
 
     private void timerElapsed(ActionEvent event) {
@@ -393,5 +341,56 @@ public class WorkerFrame extends JFrame {
 
         bmFailedJobs.setMaximum(maxValue);
         bmFailedJobs.setValue(noOfFailedJobs);
+    }
+    
+    private String getWorkerPropertiesAsString() throws IOException {
+        Properties workerProperties = new Properties();
+        ClassLoader loader = Thread.currentThread().getContextClassLoader();
+        workerProperties.load(loader.getResourceAsStream("backmeup-worker.properties"));
+
+        StringBuilder sb = new StringBuilder();
+        SortedSet<String> configLines = new TreeSet<>();
+
+        for (Map.Entry<Object, Object> workerProperty : workerProperties.entrySet()) {
+            String key = (String) workerProperty.getKey();
+            String value = (String) workerProperty.getValue();
+
+            String line = key + ": " + value + "\n";
+            configLines.add(line);
+        }
+
+        for (String line : configLines) {
+            sb.append(line);
+        }
+        return sb.toString();
+    }
+
+    private static void setLookAndFeel() {
+        if (System.getProperty(PROP_OS_NAME).startsWith("Windows")) {
+            System.setProperty(PROP_SWING_LAF, "com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
+        } else if (System.getProperty(PROP_OS_NAME).startsWith("Linux")) {
+            System.setProperty(PROP_SWING_LAF, "com.sun.java.swing.plaf.gtk.GTKLookAndFeel");
+        } else { 
+         // Assume OS X
+            System.setProperty(PROP_SWING_LAF, "com.sun.java.swing.plaf.mac.MacLookAndFeel");
+        }
+    }
+    
+    /**
+     * Launch the application.
+     */
+    public static void main(String[] args) {
+        EventQueue.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    setLookAndFeel();
+                    WorkerFrame frame = new WorkerFrame();
+                    frame.setVisible(true);
+                } catch (Exception e) {
+                    LOGGER.error("", e);
+                }
+            }
+        });
     }
 }

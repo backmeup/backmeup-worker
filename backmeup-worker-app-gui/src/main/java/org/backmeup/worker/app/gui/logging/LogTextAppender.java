@@ -33,6 +33,7 @@ public class LogTextAppender extends AppenderBase<ILoggingEvent> {
         try {
             encoder.init(out);
         } catch (IOException e) {
+            // Ignore
         }
         super.start();
     }
