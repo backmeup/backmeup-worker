@@ -9,7 +9,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.backmeup.model.exceptions.BackMeUpException;
+import org.backmeup.worker.WorkerException;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Constants;
@@ -81,7 +81,7 @@ public class DeployMonitor implements Runnable {
     @Override
     public void run() {
         if (!deploymentDirectory.exists() && !deploymentDirectory.mkdirs()) {
-            throw new BackMeUpException("Cannot create deployment directory");
+            throw new WorkerException("Cannot create deployment directory");
         }
 
         installBundles();

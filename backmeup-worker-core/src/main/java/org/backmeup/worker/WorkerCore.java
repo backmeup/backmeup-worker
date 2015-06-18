@@ -16,7 +16,6 @@ import org.backmeup.keyserver.client.KeyserverClient;
 import org.backmeup.model.dto.WorkerConfigDTO;
 import org.backmeup.model.dto.WorkerConfigDTO.DistributionMechanism;
 import org.backmeup.model.dto.WorkerInfoDTO;
-import org.backmeup.model.exceptions.BackMeUpException;
 import org.backmeup.plugin.Plugin;
 import org.backmeup.service.client.BackmeupService;
 import org.backmeup.service.client.impl.BackmeupServiceClient;
@@ -73,6 +72,7 @@ public class WorkerCore {
             try {
                 this.workerName = InetAddress.getLocalHost().getHostName();
             } catch (UnknownHostException e) {
+                LOGGER.error("", e);
                 this.workerName = workerId.toString();
             }
         }
@@ -205,7 +205,7 @@ public class WorkerCore {
 
     public void start() {
         if(!initialized){
-            throw new BackMeUpException("Worker not initialized");
+            throw new WorkerException("Worker not initialized");
         }
 
         jobReceiver.start();
