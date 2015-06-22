@@ -6,6 +6,7 @@ import java.io.IOException;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
+import org.backmeup.worker.WorkerException;
 import org.slf4j.LoggerFactory;
 
 import ch.qos.logback.classic.LoggerContext;
@@ -33,7 +34,7 @@ public class LogTextAppender extends AppenderBase<ILoggingEvent> {
         try {
             encoder.init(out);
         } catch (IOException e) {
-            // Ignore
+            throw new WorkerException("Failed to initialze logger", e);
         }
         super.start();
     }
@@ -55,7 +56,7 @@ public class LogTextAppender extends AppenderBase<ILoggingEvent> {
             });
             out.reset();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new WorkerException(e);
         }
     }
 }
