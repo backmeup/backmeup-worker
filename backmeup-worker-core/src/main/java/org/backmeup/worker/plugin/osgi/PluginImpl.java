@@ -232,37 +232,22 @@ public class PluginImpl implements Plugin {
             @Override
             public Iterator<T> iterator() {
                 try {
-                    ServiceReference[] refs = bundleContext()
-                            .getServiceReferences(service.getName(), filter);
-                    if (refs == null) {
-                        return new Iterator<T>() {
-                            @Override
-                            public boolean hasNext() {
-                                return false;
-                            }
-
-                            @Override
-                            public T next() {
-                                return null;
-                            }
-
-                            @Override
-                            public void remove() {
-                            }
-                        };
-                    }
                     List<T> services = new ArrayList<>();
-                    for (ServiceReference s : refs) {
-                        services.add((T) Proxy.newProxyInstance(
-                                PluginImpl.class.getClassLoader(),
-                                new Class[] { service },
-                                new SpecialInvocationHandler(bundleContext(), s)));
+                    ServiceReference[] refs = bundleContext().getServiceReferences(service.getName(), filter);
+                    if (refs != null) {
+                        for (ServiceReference s : refs) {
+                            services.add((T) Proxy.newProxyInstance(
+                                    PluginImpl.class.getClassLoader(),
+                                    new Class[] { service },
+                                    new SpecialInvocationHandler(bundleContext(), s)));
+                        }
                     }
                     return services.iterator();
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    throw new BackMeUpException(e);
                 }
             }
+
         };
     }
 
