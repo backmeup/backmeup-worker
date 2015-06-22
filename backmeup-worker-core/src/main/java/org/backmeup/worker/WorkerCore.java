@@ -270,8 +270,13 @@ public class WorkerCore {
     // Nested classes and enums -----------------------------------------------
 
     public enum WorkerState {
-        OFFLINE, // Not connected to dependent services
-        IDLE,    // No jobs to execute
-        BUSY     // Jobs are currently running on worker
+        // Not connected to dependent services
+        OFFLINE,
+
+        // No jobs to execute
+        IDLE,
+
+        // Jobs are currently running on worker
+        BUSY
     }
 }
