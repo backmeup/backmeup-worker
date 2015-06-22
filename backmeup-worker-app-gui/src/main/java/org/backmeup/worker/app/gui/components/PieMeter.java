@@ -19,7 +19,7 @@ public class PieMeter extends JComponent {
     private Color foreColor = Color.red;
     private Color borderColor = Color.blue;
 
-    private Stroke stroke = new BasicStroke(STROKE_WIDTH);
+    private transient Stroke stroke = new BasicStroke(STROKE_WIDTH);
 
     public PieMeter() {
 
