@@ -12,7 +12,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.backmeup.keyserver.client.KeyserverClient;
 import org.backmeup.model.dto.WorkerConfigDTO;
 import org.backmeup.model.dto.WorkerConfigDTO.DistributionMechanism;
 import org.backmeup.model.dto.WorkerInfoDTO;
@@ -46,7 +45,6 @@ public class WorkerCore {
     private final AtomicInteger noOfFaildJobs;
 
     private Plugin plugins;
-    private final KeyserverClient keyserverClient;
     private final BackmeupService bmuServiceClient;
 
     private final String jobTempDir;
@@ -84,17 +82,9 @@ public class WorkerCore {
         this.noOfFinishedJobs = new AtomicInteger(0);
         this.noOfFaildJobs = new AtomicInteger(0);
 
-        String keyserverBaseUrl = Configuration.getProperty("backmeup.keyserver.baseUrl");
-        String workerAppId = Configuration.getProperty("backmeup.worker.appId");
-        String workerAppSecret = Configuration.getProperty("backmeup.worker.appSecret");
-        this.keyserverClient = new KeyserverClient(keyserverBaseUrl, workerAppId, workerAppSecret);
-        
-
-        String bmuServiceScheme = Configuration.getProperty("backmeup.service.scheme");
-        String bmuServiceHost = Configuration.getProperty("backmeup.service.host");
-        String bmuServicePath = Configuration.getProperty("backmeup.service.path");
+        String bmuServiceBaseUrl = Configuration.getProperty("backmeup.service.baseUrl");
         String bmuServiceAccessToken = Configuration.getProperty("backmeup.service.accessToken");
-        this.bmuServiceClient = new BackmeupServiceClient(bmuServiceScheme, bmuServiceHost, bmuServicePath, bmuServiceAccessToken);
+        this.bmuServiceClient = new BackmeupServiceClient(bmuServiceBaseUrl, bmuServiceAccessToken);
 
         this.jobTempDir = Configuration.getProperty("backmeup.worker.workDir");
 
@@ -228,7 +218,7 @@ public class WorkerCore {
         }
 
         Long jobId = jre.getJobId();
-        Runnable backupJobWorker = new BackupJobWorkerThread(jobId, plugins, bmuServiceClient, keyserverClient, jobTempDir, backupName);
+        Runnable backupJobWorker = new BackupJobWorkerThread(jobId, plugins, bmuServiceClient, jobTempDir, backupName);
         executorPool.execute(backupJobWorker);   
     }
 

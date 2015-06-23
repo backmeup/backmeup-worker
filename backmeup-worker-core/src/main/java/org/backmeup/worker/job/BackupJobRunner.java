@@ -7,18 +7,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.ResourceBundle;
 
-import org.backmeup.keyserver.client.KeyserverClient;
-import org.backmeup.keyserver.model.Token.Kind;
-import org.backmeup.keyserver.model.dto.TokenDTO;
-import org.backmeup.model.Profile;
-import org.backmeup.model.Token;
 import org.backmeup.model.constants.JobExecutionStatus;
 import org.backmeup.model.dto.BackupJobExecutionDTO;
 import org.backmeup.model.dto.PluginProfileDTO;
 import org.backmeup.model.spi.PluginDescribable;
-import org.backmeup.model.utils.Serialization;
 import org.backmeup.plugin.Plugin;
 import org.backmeup.plugin.api.connectors.Action;
 import org.backmeup.plugin.api.connectors.ActionException;
@@ -45,22 +38,17 @@ public class BackupJobRunner {
     private final String backupName;
 
     private final Plugin plugins;
-    private final KeyserverClient keyserver;
     private final BackmeupService bmuService;
 
-    private final ResourceBundle textBundle = ResourceBundle.getBundle("BackupJobRunner");
-
-    public BackupJobRunner(Plugin plugins, KeyserverClient keyserver, BackmeupService bmuService, String jobTempDir,
-            String backupName) {
+    public BackupJobRunner(Plugin plugins, BackmeupService bmuService, String jobTempDir, String backupName) {
         this.plugins = plugins;
-        this.keyserver = keyserver;
         this.bmuService = bmuService;
         this.jobTempDir = jobTempDir;
         this.backupName = backupName;
     }
 
     public void executeBackup(Long jobExecutionId, Storage storage) throws StorageException {
-        BackupJobExecutionDTO backupJob = this.bmuService.getBackupJobExecution(jobExecutionId);
+        BackupJobExecutionDTO backupJob = this.bmuService.getBackupJobExecution(jobExecutionId, true);
         
         LOGGER.info("Job execution with id {} started for user {}", backupJob.getId(), backupJob.getUser().getUserId());
         
@@ -69,10 +57,7 @@ public class BackupJobRunner {
 
         this.bmuService.updateBackupJobExecution(backupJob);
 
-        // Get plugin data from keyserver 
-        TokenDTO token = new TokenDTO(Kind.INTERNAL, backupJob.getToken());
-
-        try {            
+        try {
             // Open temporary local storage------------------------------------
             // This storage is used to temporarily store the data while executing the job
             String tmpDir = generateTmpDirName(backupJob, backupJob.getSource());
@@ -83,16 +68,11 @@ public class BackupJobRunner {
             Datasource source = this.plugins.getDatasource(backupJob.getSource().getPluginId());
             Map<String, String> sourceAuthData = new HashMap<String, String>();
             if (backupJob.getSource().getAuthData() != null) {
-                String encodedAuthData = this.keyserver.getPluginData(token, backupJob.getSource().getAuthData().getId().toString());
-                sourceAuthData = Serialization.getEncodedStringAsObject(encodedAuthData, HashMap.class);
+                sourceAuthData = backupJob.getSource().getAuthData().getProperties();
             }
-            
-            String encodedSourceProperties = this.keyserver.getPluginData(token, String.valueOf(backupJob.getSource().getProfileId()));
-            Profile sourceProfile = new Profile();
-            sourceProfile.setPropertiesAndOptionsFromEncodedString(encodedSourceProperties);
-            Map<String, String> sourceProperties = sourceProfile.getProperties();
+            Map<String, String> sourceProperties = backupJob.getSource().getProperties();
             if(sourceProperties == null) sourceProperties = new HashMap<String, String>();
-            List<String> sourceOptions = sourceProfile.getOptions();
+            List<String> sourceOptions = backupJob.getSource().getOptions();
             if(sourceOptions == null) sourceOptions = new ArrayList<String>();
             
 
@@ -101,19 +81,15 @@ public class BackupJobRunner {
             Datasink sink = this.plugins.getDatasink(backupJob.getSink().getPluginId());
             Map<String, String> sinkAuthData = new HashMap<String, String>();
             if (backupJob.getSink().getAuthData() != null) {
-                String encodedAuthData = this.keyserver.getPluginData(token, backupJob.getSink().getAuthData().getId().toString());
-                sinkAuthData = Serialization.getEncodedStringAsObject(encodedAuthData, HashMap.class);
+                sinkAuthData = backupJob.getSink().getAuthData().getProperties();
             }
             
             sinkAuthData.put("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
             sinkAuthData.put("org.backmeup.userid", backupJob.getUser().getUserId() + "");
 
-            String encodedSinkProperties = this.keyserver.getPluginData(token, String.valueOf(backupJob.getSink().getProfileId()));
-            Profile sinkProfile = new Profile();
-            sinkProfile.setPropertiesAndOptionsFromEncodedString(encodedSinkProperties);
-            Map<String, String> sinkProperties = sinkProfile.getProperties();
+            Map<String, String> sinkProperties = backupJob.getSink().getProperties();
             if(sinkProperties == null) sinkProperties = new HashMap<String, String>();
-            List<String> sinkOptions = sinkProfile.getOptions();
+            List<String> sinkOptions = backupJob.getSink().getOptions();
             if(sinkOptions == null) sinkOptions = new ArrayList<String>();
             
 
@@ -147,7 +123,7 @@ public class BackupJobRunner {
 
             // Run indexing in case the user has enabled it using the 'enable.indexing' user property
             // We're using true as the default value for now
-            boolean doIndexing = true;
+            boolean doIndexing = false;
 
             // has the indexer been requested during creation of the backup job?
             List<PluginProfileDTO> actions = backupJob.getActions();
