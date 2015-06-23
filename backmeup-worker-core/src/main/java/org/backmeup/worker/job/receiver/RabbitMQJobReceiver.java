@@ -125,7 +125,7 @@ public class RabbitMQJobReceiver implements JobReceiver{
 
                                     fireEvent(new JobReceivedEvent(this, jobId));
 
-                                    // Delay further receiving to ge the callback listener a chance
+                                    // Delay further receiving to give the callback listener a chance
                                     // to react on (e.g. pause or stop)
                                     Thread.sleep(DELAY_INTERVAL);
                                 }
