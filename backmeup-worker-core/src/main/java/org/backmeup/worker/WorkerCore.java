@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.backmeup.model.dto.WorkerConfigDTO;
 import org.backmeup.model.dto.WorkerConfigDTO.DistributionMechanism;
 import org.backmeup.model.dto.WorkerInfoDTO;
-import org.backmeup.plugin.Plugin;
+import org.backmeup.plugin.infrastructure.PluginManager;
 import org.backmeup.service.client.BackmeupService;
 import org.backmeup.service.client.impl.BackmeupServiceClient;
 import org.backmeup.worker.config.Configuration;
@@ -25,7 +25,6 @@ import org.backmeup.worker.job.receiver.JobReceivedListener;
 import org.backmeup.worker.job.receiver.RabbitMQJobReceiver;
 import org.backmeup.worker.job.threadpool.ObservableThreadPoolExecutor;
 import org.backmeup.worker.job.threadpool.ThreadPoolListener;
-import org.backmeup.worker.plugin.osgi.PluginImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +43,7 @@ public class WorkerCore {
     private final AtomicInteger noOfFinishedJobs;
     private final AtomicInteger noOfFaildJobs;
 
-    private Plugin plugins;
+    private PluginManager pluginManager;
     private final BackmeupService bmuServiceClient;
 
     private final String jobTempDir;
@@ -159,11 +158,11 @@ public class WorkerCore {
         String pluginsDeploymentDir = Configuration.getProperty("backmeup.osgi.deploymentDirectory");
         String pluginsTempDir = Configuration.getProperty("backmeup.osgi.temporaryDirectory");
         String pluginsExportedPackages = resp.getPluginsExportedPackages();
-        this.plugins = new PluginImpl(pluginsDeploymentDir, pluginsTempDir, pluginsExportedPackages);
-        plugins.startup();
+        this.pluginManager = new PluginManager(pluginsDeploymentDir, pluginsTempDir, pluginsExportedPackages);
+        this.pluginManager.startup();
         
-        // TODO: Fix workaround. Startup method should block until plugin
-        // infrastructure is fully initialized and all plugins are loaded
+        // Startup method should block until plugin infrastructure is
+        // fully initialized and all plugins are loaded
         try {
             Thread.sleep(2000);
         } catch (InterruptedException e) {
@@ -203,7 +202,7 @@ public class WorkerCore {
 
     public void shutdown() {
         executorPool.shutdown();
-        plugins.shutdown();
+        pluginManager.shutdown();
         jobReceiver.stop();
     }
 
@@ -218,7 +217,7 @@ public class WorkerCore {
         }
 
         Long jobId = jre.getJobId();
-        Runnable backupJobWorker = new BackupJobWorkerThread(jobId, plugins, bmuServiceClient, jobTempDir, backupName);
+        Runnable backupJobWorker = new BackupJobWorkerThread(jobId, pluginManager, bmuServiceClient, jobTempDir, backupName);
         executorPool.execute(backupJobWorker);   
     }
 

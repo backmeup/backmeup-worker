@@ -12,7 +12,6 @@ import org.backmeup.model.constants.JobExecutionStatus;
 import org.backmeup.model.dto.BackupJobExecutionDTO;
 import org.backmeup.model.dto.PluginProfileDTO;
 import org.backmeup.model.spi.PluginDescribable;
-import org.backmeup.plugin.Plugin;
 import org.backmeup.plugin.api.connectors.Action;
 import org.backmeup.plugin.api.connectors.ActionException;
 import org.backmeup.plugin.api.connectors.Datasink;
@@ -20,6 +19,7 @@ import org.backmeup.plugin.api.connectors.Datasource;
 import org.backmeup.plugin.api.connectors.Progressable;
 import org.backmeup.plugin.api.storage.Storage;
 import org.backmeup.plugin.api.storage.StorageException;
+import org.backmeup.plugin.infrastructure.PluginManager;
 import org.backmeup.service.client.BackmeupService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,11 +37,11 @@ public class BackupJobRunner {
     private final String jobTempDir;
     private final String backupName;
 
-    private final Plugin plugins;
+    private final PluginManager pluginManager;
     private final BackmeupService bmuService;
 
-    public BackupJobRunner(Plugin plugins, BackmeupService bmuService, String jobTempDir, String backupName) {
-        this.plugins = plugins;
+    public BackupJobRunner(PluginManager pluginManager, BackmeupService bmuService, String jobTempDir, String backupName) {
+        this.pluginManager = pluginManager;
         this.bmuService = bmuService;
         this.jobTempDir = jobTempDir;
         this.backupName = backupName;
@@ -65,7 +65,7 @@ public class BackupJobRunner {
             
             // Prepare source plugin data -------------------------------------
             
-            Datasource source = this.plugins.getDatasource(backupJob.getSource().getPluginId());
+            Datasource source = this.pluginManager.getDatasource(backupJob.getSource().getPluginId());
             Map<String, String> sourceAuthData = new HashMap<String, String>();
             if (backupJob.getSource().getAuthData() != null) {
                 sourceAuthData = backupJob.getSource().getAuthData().getProperties();
@@ -78,7 +78,7 @@ public class BackupJobRunner {
 
             // Prepare sink plugin data ---------------------------------------
             
-            Datasink sink = this.plugins.getDatasink(backupJob.getSink().getPluginId());
+            Datasink sink = this.pluginManager.getDatasink(backupJob.getSink().getPluginId());
             Map<String, String> sinkAuthData = new HashMap<String, String>();
             if (backupJob.getSink().getAuthData() != null) {
                 sinkAuthData = backupJob.getSink().getAuthData().getProperties();
@@ -123,7 +123,7 @@ public class BackupJobRunner {
 
             // Run indexing in case the user has enabled it using the 'enable.indexing' user property
             // We're using true as the default value for now
-            boolean doIndexing = false;
+            boolean doIndexing = true;
 
             // has the indexer been requested during creation of the backup job?
             List<PluginProfileDTO> actions = backupJob.getActions();
@@ -137,7 +137,7 @@ public class BackupJobRunner {
 
             if (doIndexing && indexer == null) {
                 // if we need to index, add the indexer to the requested actions
-                PluginDescribable ad = this.plugins.getPluginDescribableById(INDEXING_PLUGIN_OSGI_BUNDLE_ID);
+                PluginDescribable ad = this.pluginManager.getPluginDescribableById(INDEXING_PLUGIN_OSGI_BUNDLE_ID);
                 PluginProfileDTO indexActionProfile = new PluginProfileDTO();
                 indexActionProfile.setPluginId(ad.getId());
                 indexActionProfile.setProperties(new HashMap<String, String>());
@@ -155,7 +155,7 @@ public class BackupJobRunner {
                      if (INDEXER_BACKMEUP_PLUGIN_ID.equals(actionId)) {
                         if (doIndexing) {
                             //hand over information from PluginDescribable, etc. to indexAction
-                            PluginDescribable pluginDescr = this.plugins.getPluginDescribableById(backupJob.getSink().getPluginId());
+                            PluginDescribable pluginDescr = this.pluginManager.getPluginDescribableById(backupJob.getSink().getPluginId());
                             Map<String, String> p = pluginDescr.getMetadata(sinkAuthData);
                             //add the BMU_filegenerator_530_26_01_2015_12_56 prefix for indexer plugin
                             p.put("org.backmeup.bmuprefix", getLastSplitElement(tmpDir, "/"));
@@ -165,7 +165,7 @@ public class BackupJobRunner {
                             doIndexing(p, params, storage, backupJob);
                         }
                     } else {
-                        action = this.plugins.getAction(actionId);
+                        action = this.pluginManager.getAction(actionId);
                         action.doAction(null, params, null, storage, backupJob, new JobStatusProgressor(backupJob, "action"));
                     }
                 } catch (ActionException e) {
@@ -200,11 +200,11 @@ public class BackupJobRunner {
     private void doIndexing(Map<String, String> properties, Map<String, String> params, Storage storage, BackupJobExecutionDTO job)
             throws ActionException {
         // If we do indexing, the Thumbnail renderer needs to run before!
-        Action thumbnailAction = this.plugins.getAction("org.backmeup.thumbnail");
+        Action thumbnailAction = this.pluginManager.getAction("org.backmeup.thumbnail");
         thumbnailAction.doAction(null, properties, null, storage, job, new JobStatusProgressor(job, "thumbnailAction"));
 
         // After thumbnail rendering, run indexing
-        Action indexAction = this.plugins.getAction("org.backmeup.indexing");
+        Action indexAction = this.pluginManager.getAction("org.backmeup.indexing");
         indexAction.doAction(null, properties, null, storage, job, new JobStatusProgressor(job, "indexaction"));
     }
 
