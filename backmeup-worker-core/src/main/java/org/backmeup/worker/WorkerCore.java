@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.backmeup.model.dto.WorkerConfigDTO;
 import org.backmeup.model.dto.WorkerConfigDTO.DistributionMechanism;
 import org.backmeup.model.dto.WorkerInfoDTO;
+import org.backmeup.model.exceptions.BackMeUpException;
 import org.backmeup.plugin.infrastructure.PluginManager;
 import org.backmeup.service.client.BackmeupService;
 import org.backmeup.service.client.impl.BackmeupServiceClient;
@@ -30,7 +31,7 @@ import org.slf4j.LoggerFactory;
 
 public class WorkerCore {
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkerCore.class);
-    
+
     private final UUID workerId;
     private String workerName;
 
@@ -61,7 +62,7 @@ public class WorkerCore {
         } else {
             this.workerId = UUID.randomUUID();
         }
-        
+
         String wName = Configuration.getProperty("backmeup.worker.name");
         if (wName != null) {
             this.workerName = wName;
@@ -70,10 +71,10 @@ public class WorkerCore {
                 this.workerName = InetAddress.getLocalHost().getHostName();
             } catch (UnknownHostException e) {
                 LOGGER.error("", e);
-                this.workerName = workerId.toString();
+                this.workerName = this.workerId.toString();
             }
         }
-        
+
         this.maxWorkerThreads = Integer.parseInt(Configuration.getProperty("backmeup.worker.maxParallelJobs"));
 
         this.noOfRunningJobs = new AtomicInteger(0);
@@ -87,9 +88,10 @@ public class WorkerCore {
 
         this.jobTempDir = Configuration.getProperty("backmeup.worker.workDir");
 
-        BlockingQueue<Runnable> jobQueue = new ArrayBlockingQueue<>(maxWorkerThreads);
+        BlockingQueue<Runnable> jobQueue = new ArrayBlockingQueue<>(this.maxWorkerThreads);
         ThreadFactory threadFactory = Executors.defaultThreadFactory();
-        this.executorPool = new ObservableThreadPoolExecutor(maxWorkerThreads, maxWorkerThreads, 10, TimeUnit.SECONDS, jobQueue, threadFactory);
+        this.executorPool = new ObservableThreadPoolExecutor(this.maxWorkerThreads, this.maxWorkerThreads, 10,
+                TimeUnit.SECONDS, jobQueue, threadFactory);
 
         this.initialized = false;
         setCurrentState(WorkerState.OFFLINE);
@@ -98,7 +100,7 @@ public class WorkerCore {
     // Getters and setters ----------------------------------------------------
 
     public WorkerState getCurrentState() {
-        return currentState;
+        return this.currentState;
     }
 
     private void setCurrentState(WorkerState currentState) {
@@ -110,19 +112,19 @@ public class WorkerCore {
     }
 
     public int getNoOfMaximumJobs() {
-        return maxWorkerThreads;
+        return this.maxWorkerThreads;
     }
 
     public int getNoOfFinishedJobs() {
-        return noOfFinishedJobs.get();
+        return this.noOfFinishedJobs.get();
     }
 
     public int getNoOfFetchedJobs() {
-        return noOfFetchedJobs.get();
+        return this.noOfFetchedJobs.get();
     }
 
     public int getNoOfFailedJobs() {
-        return noOfFaildJobs.get();
+        return this.noOfFaildJobs.get();
     }
 
     // Public Methods ---------------------------------------------------------
@@ -130,20 +132,28 @@ public class WorkerCore {
     public void initialize() {
         LOGGER.info("Initializing backmeup-worker");
         boolean errorsDuringInit = false;
-        
+
         WorkerInfoDTO workerInfo = getWorkerInfo();
-        WorkerConfigDTO resp = bmuServiceClient.initializeWorker(workerInfo);
-        
+
+        WorkerConfigDTO resp = null;
+        try {
+            //bmu service rest initialization might not yet have been properly completed at startup 
+            resp = this.bmuServiceClient.initializeWorker(workerInfo);
+            LOGGER.info("Initializing backmeup-worker - bmu service handshake done");
+        } catch (BackMeUpException e) {
+            LOGGER.info("Initializing backmeup-worker - bmu service handshake failed");
+        }
+
         this.backupName = resp.getBackupNameTemplate();
-        
+
         if (resp.getDistributionMechanism() == DistributionMechanism.QUEUE) {
             final StringTokenizer tokenizer = new StringTokenizer(resp.getConnectionInfo(), ";");
             final String mqHost = tokenizer.nextToken();
             final String mqName = tokenizer.nextToken();
-            
+
             this.jobReceiver = new RabbitMQJobReceiver(mqHost, mqName, 500);
-            jobReceiver.initialize();
-            jobReceiver.addJobReceivedListener(new JobReceivedListener() {
+            this.jobReceiver.initialize();
+            this.jobReceiver.addJobReceivedListener(new JobReceivedListener() {
                 @Override
                 public void jobReceived(JobReceivedEvent jre) {
                     executeBackupJob(jre);
@@ -153,14 +163,14 @@ public class WorkerCore {
             // DistributionMechanism not supported
             errorsDuringInit = true;
         }
-        
+
         // Initialize plugins infrastructure and load all plugins
         String pluginsDeploymentDir = Configuration.getProperty("backmeup.osgi.deploymentDirectory");
         String pluginsTempDir = Configuration.getProperty("backmeup.osgi.temporaryDirectory");
         String pluginsExportedPackages = resp.getPluginsExportedPackages();
         this.pluginManager = new PluginManager(pluginsDeploymentDir, pluginsTempDir, pluginsExportedPackages);
         this.pluginManager.startup();
-        
+
         // Startup method should block until plugin infrastructure is
         // fully initialized and all plugins are loaded
         try {
@@ -168,8 +178,8 @@ public class WorkerCore {
         } catch (InterruptedException e) {
             // Nothing to do
         }
-        
-        executorPool.addThreadPoolListener(new ThreadPoolListener() {
+
+        this.executorPool.addThreadPoolListener(new ThreadPoolListener() {
             @Override
             public void terminated() {
                 // Nothing to do here
@@ -185,40 +195,41 @@ public class WorkerCore {
                 jobThreadAterExecute(r, t);
             }
         });
-        
-        if(!errorsDuringInit) {
+
+        if (!errorsDuringInit) {
             setCurrentState(WorkerState.IDLE);
-            initialized = true;
+            this.initialized = true;
         }
     }
 
     public void start() {
-        if(!initialized){
+        if (!this.initialized) {
             throw new WorkerException("Worker not initialized");
         }
 
-        jobReceiver.start();
+        this.jobReceiver.start();
     }
 
     public void shutdown() {
-        executorPool.shutdown();
-        pluginManager.shutdown();
-        jobReceiver.stop();
+        this.executorPool.shutdown();
+        this.pluginManager.shutdown();
+        this.jobReceiver.stop();
     }
 
     // Private methods --------------------------------------------------------
 
     private void executeBackupJob(JobReceivedEvent jre) {
-        noOfFetchedJobs.getAndIncrement();
+        this.noOfFetchedJobs.getAndIncrement();
 
         // if we reached our maximum concurrent job limit, pause the receiver
-        if(getNoOfCurrentJobs() + 1 >= getNoOfMaximumJobs()) {
-            jobReceiver.setPaused(true);
+        if (getNoOfCurrentJobs() + 1 >= getNoOfMaximumJobs()) {
+            this.jobReceiver.setPaused(true);
         }
 
         Long jobId = jre.getJobId();
-        Runnable backupJobWorker = new BackupJobWorkerThread(jobId, pluginManager, bmuServiceClient, jobTempDir, backupName);
-        executorPool.execute(backupJobWorker);   
+        Runnable backupJobWorker = new BackupJobWorkerThread(jobId, this.pluginManager, this.bmuServiceClient,
+                this.jobTempDir, this.backupName);
+        this.executorPool.execute(backupJobWorker);
     }
 
     private void jobThreadBeforeExecute(Thread t, Runnable r) {
@@ -227,32 +238,32 @@ public class WorkerCore {
     }
 
     private void jobThreadAterExecute(Runnable r, Throwable t) {
-        if(t != null) {
-            noOfFaildJobs.getAndIncrement();
+        if (t != null) {
+            this.noOfFaildJobs.getAndIncrement();
         } else {
-            noOfFinishedJobs.getAndIncrement();
+            this.noOfFinishedJobs.getAndIncrement();
         }
 
         this.noOfRunningJobs.getAndDecrement();
-        if (noOfRunningJobs.get() == 0) {
+        if (this.noOfRunningJobs.get() == 0) {
             setCurrentState(WorkerState.IDLE);
         }
-        jobReceiver.setPaused(false);
+        this.jobReceiver.setPaused(false);
     }
-    
+
     private WorkerInfoDTO getWorkerInfo() {
         WorkerInfoDTO workerInfo = new WorkerInfoDTO();
-        
-        workerInfo.setWorkerId(workerId);
-        workerInfo.setWorkerName(workerName);
+
+        workerInfo.setWorkerId(this.workerId);
+        workerInfo.setWorkerName(this.workerName);
         workerInfo.setOsName(System.getProperty("os.name"));
         workerInfo.setOsVersion(System.getProperty("os.version"));
         workerInfo.setOsArchitecture(System.getProperty("os.arch"));
         workerInfo.setTotalMemory(Runtime.getRuntime().totalMemory());
         workerInfo.setTotalCPUCores(Runtime.getRuntime().availableProcessors());
-        long totalSpace = new File(jobTempDir).getTotalSpace();
+        long totalSpace = new File(this.jobTempDir).getTotalSpace();
         workerInfo.setTotalSpace(totalSpace);
-        
+
         return workerInfo;
     }
 

@@ -8,7 +8,7 @@
   <servlet>
   	<servlet-name>backmeup-worker</servlet-name>
   	<servlet-class>org.backmeup.worker.app.servlet.WorkerServlet</servlet-class>
-  	<load-on-startup>1</load-on-startup>
+  	<load-on-startup>2</load-on-startup>
   </servlet>
   
   <servlet-mapping>
