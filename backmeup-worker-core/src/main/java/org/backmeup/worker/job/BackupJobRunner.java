@@ -7,6 +7,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.backmeup.model.constants.JobExecutionStatus;
 import org.backmeup.model.dto.BackupJobExecutionDTO;
@@ -21,8 +23,18 @@ import org.backmeup.plugin.api.storage.Storage;
 import org.backmeup.plugin.api.storage.StorageException;
 import org.backmeup.plugin.infrastructure.PluginManager;
 import org.backmeup.service.client.BackmeupService;
+import org.backmeup.worker.perfmon.JobMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.netflix.servo.annotations.DataSourceType;
+import com.netflix.servo.annotations.Monitor;
+import com.netflix.servo.monitor.BasicTimer;
+import com.netflix.servo.monitor.Counter;
+import com.netflix.servo.monitor.MonitorConfig;
+import com.netflix.servo.monitor.Monitors;
+import com.netflix.servo.monitor.Stopwatch;
+import com.netflix.servo.monitor.Timer;
 
 /**
  * Implements the actual BackupJob execution.
@@ -35,19 +47,24 @@ public class BackupJobRunner {
     private static final String INDEXER_BACKMEUP_PLUGIN_ID = "org.backmeup.indexer";
 
     private final String jobTempDir;
-    private final String backupName;
+    private final String backupNameTemplate;
 
     private final PluginManager pluginManager;
     private final BackmeupService bmuService;
-
+    
+    private final Counter bytesReceived =   JobMetrics.getCounter(BackupJobRunner.class, JobMetrics.BYTES_RECEIVED);
+    private final Counter bytesSent =       JobMetrics.getCounter(BackupJobRunner.class, JobMetrics.BYTES_SENT);
+    private final Counter objectsReceived = JobMetrics.getCounter(BackupJobRunner.class, JobMetrics.OBJECTS_RECEIVED);
+    private final Counter objectsSent =     JobMetrics.getCounter(BackupJobRunner.class, JobMetrics.OBJECTS_SENT);
+    
     public BackupJobRunner(PluginManager pluginManager, BackmeupService bmuService, String jobTempDir, String backupName) {
         this.pluginManager = pluginManager;
         this.bmuService = bmuService;
         this.jobTempDir = jobTempDir;
-        this.backupName = backupName;
+        this.backupNameTemplate = backupName;
     }
 
-    public void executeBackup(Long jobExecutionId, Storage storage) throws StorageException {
+    public void executeBackup(Long jobExecutionId, Storage storage) throws StorageException {        
         BackupJobExecutionDTO backupJob = this.bmuService.getBackupJobExecution(jobExecutionId, true);
         
         LOGGER.info("Job execution with id {} started for user {}", backupJob.getId(), backupJob.getUser().getUserId());
@@ -97,6 +114,8 @@ public class BackupJobRunner {
             LOGGER.info("Job {} downloading", backupJob.getId());
             source.downloadAll(sourceAuthData, sourceProperties, sourceOptions, storage, 
                     new JobStatusProgressor(backupJob, "datasource"));
+            bytesReceived.increment(storage.getDataObjectSize());
+            objectsReceived.increment(storage.getDataObjectCount());
             
             // Prepare plugin data for actions --------------------------------
             // Make properties global for the action loop. So the plugins can 
@@ -177,6 +196,8 @@ public class BackupJobRunner {
             LOGGER.info("Job {} uploading", backupJob.getId());
             sink.upload(sinkAuthData, sinkProperties, sinkOptions, storage, 
                     new JobStatusProgressor(backupJob, "datasink"));
+            bytesSent.increment(storage.getDataObjectSize());
+            objectsSent.increment(storage.getDataObjectCount());
 
             // Close temp local storage-----------------------------------------
             // Closing the storage means to remove all files in the temporary directory.
@@ -217,7 +238,7 @@ public class BackupJobRunner {
         // Take only last part of "org.backmeup.xxxx" (xxxx)
         String profilename = getLastSplitElement(profile.getPluginId(), "\\.");
 
-        formatter = new SimpleDateFormat(this.backupName.replaceAll("%PROFILEID%", profileid.toString()).replaceAll(
+        formatter = new SimpleDateFormat(this.backupNameTemplate.replaceAll("%PROFILEID%", profileid.toString()).replaceAll(
                 "%SOURCE%", profilename));
 
         return this.jobTempDir + "/" + jobid + "/" + formatter.format(date);
