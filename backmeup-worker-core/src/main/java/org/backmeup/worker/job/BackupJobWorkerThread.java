@@ -3,7 +3,6 @@ package org.backmeup.worker.job;
 import org.backmeup.plugin.api.storage.Storage;
 import org.backmeup.plugin.infrastructure.PluginManager;
 import org.backmeup.service.client.BackmeupService;
-import org.backmeup.service.client.impl.BackmeupServiceClient;
 import org.backmeup.worker.WorkerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,14 +17,6 @@ public class BackupJobWorkerThread implements Runnable {
 
     private final PluginManager pluginManager;
     private final BackmeupService bmuServiceClient;
-
-    public BackupJobWorkerThread(Long backupJobId, PluginManager plugins,
-            String serviceScheme, String serviceHost, String servicePath,
-            String serviceAccessToken, String jobTempDir, String backupName) {
-        this(backupJobId, plugins, new BackmeupServiceClient(serviceScheme,
-                serviceHost, servicePath, serviceAccessToken), jobTempDir,
-                backupName);
-    }
 
     public BackupJobWorkerThread(Long backupJobId, PluginManager pluginManager,
             BackmeupService bmuServiceClient, String jobTempDir,String backupName) {
