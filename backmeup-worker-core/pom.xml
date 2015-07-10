@@ -65,6 +65,12 @@
 			<artifactId>jackson-mapper-asl</artifactId>
 			<version>${version.org.codehaus.jackson}</version>
 		</dependency>
+		
+		<dependency>
+            <groupId>com.netflix.servo</groupId>
+            <artifactId>servo-core</artifactId>
+            <version>0.8.0</version>
+        </dependency>
 
 		<dependency>
 			<groupId>junit</groupId>
