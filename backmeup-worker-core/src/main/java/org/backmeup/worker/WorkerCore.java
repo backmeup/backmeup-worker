@@ -3,8 +3,6 @@ package org.backmeup.worker;
 import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.StringTokenizer;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -28,24 +26,13 @@ import org.backmeup.worker.job.receiver.JobReceivedListener;
 import org.backmeup.worker.job.receiver.RabbitMQJobReceiver;
 import org.backmeup.worker.job.threadpool.ObservableThreadPoolExecutor;
 import org.backmeup.worker.job.threadpool.ThreadPoolListener;
-import org.backmeup.worker.perfmon.BackmeupMetricObserver;
-import org.backmeup.worker.perfmon.OperatingSystemMetricPoller;
-import org.backmeup.worker.perfmon.RuntimeMetricPoller;
+import org.backmeup.worker.perfmon.PerformanceMonitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.netflix.servo.monitor.MonitorConfig;
 import com.netflix.servo.monitor.Monitors;
 import com.netflix.servo.monitor.NumberGauge;
-import com.netflix.servo.publish.AsyncMetricObserver;
-import com.netflix.servo.publish.BasicMetricFilter;
-import com.netflix.servo.publish.CounterToRateMetricTransform;
-import com.netflix.servo.publish.FileMetricObserver;
-import com.netflix.servo.publish.MetricObserver;
-import com.netflix.servo.publish.MetricPoller;
-import com.netflix.servo.publish.MonitorRegistryMetricPoller;
-import com.netflix.servo.publish.PollRunnable;
-import com.netflix.servo.publish.PollScheduler;
 
 public class WorkerCore {
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkerCore.class);
@@ -223,7 +210,7 @@ public class WorkerCore {
             }
         });
         
-        initMetricsPublishing();
+        PerformanceMonitor.initialize(bmuServiceClient);
 
         if (!errorsDuringInit) {
             setCurrentState(WorkerState.IDLE);
@@ -235,6 +222,8 @@ public class WorkerCore {
         if (!this.initialized) {
             throw new WorkerException("Worker not initialized");
         }
+        
+        PerformanceMonitor.startPublishing();
 
         this.jobReceiver.start();
     }
@@ -294,40 +283,6 @@ public class WorkerCore {
         workerInfo.setTotalSpace(totalSpace);
 
         return workerInfo;
-    }
-    
-    private void initMetricsPublishing() {
-        final List<MetricObserver> observers = new ArrayList<MetricObserver>();
-        observers.add(createBackmeupMetricObserver());
-        
-        PollScheduler.getInstance().start();
-        schedule(new MonitorRegistryMetricPoller(), observers);
-        schedule(new OperatingSystemMetricPoller(), observers);
-        schedule(new RuntimeMetricPoller(), observers);
-    }
-    
-    private MetricObserver createFileObserver() {
-        return async("AsyncFileMetricObserver", new FileMetricObserver("backmeup-worker_metrics_", new File(".")));
-    }
-        
-    private MetricObserver createBackmeupMetricObserver() {
-        return rateTransform(async("AsyncBackmeupMetricObserver", new BackmeupMetricObserver(bmuServiceClient)));
-    }
-    
-    private static MetricObserver rateTransform(MetricObserver observer) {
-        final long heartbeat = 2 * 10;
-        return new CounterToRateMetricTransform(observer, heartbeat, 10, TimeUnit.SECONDS);
-    }
-    
-    private static MetricObserver async(String name, MetricObserver observer) {
-        final long expireTime = 2000 * 10;
-        final int queueSize = 10;
-        return new AsyncMetricObserver(name, observer, queueSize, expireTime);
-    }
-    
-    private static void schedule(MetricPoller poller, List<MetricObserver> observers) {
-        final PollRunnable task = new PollRunnable(poller, BasicMetricFilter.MATCH_ALL, true, observers);
-        PollScheduler.getInstance().addPoller(task, 10, TimeUnit.SECONDS);
     }
 
     // Nested classes and enums -----------------------------------------------
