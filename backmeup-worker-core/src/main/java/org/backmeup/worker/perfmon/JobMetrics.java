@@ -9,6 +9,8 @@ import com.netflix.servo.monitor.Counter;
 import com.netflix.servo.monitor.MonitorConfig;
 
 public final class JobMetrics {
+    public static final String CLASS_TAG = "class";
+    
     public static final String BYTES_RECEIVED = "bytesReceived";
     public static final String BYTES_SENT = "bytesSent";
 
@@ -35,7 +37,7 @@ public final class JobMetrics {
 
     @SuppressWarnings("rawtypes")
     public static Counter getCounter(Class c, String n) {
-        MonitorConfig config = MonitorConfig.builder(n).withTag("class", c.getSimpleName()).build();
+        MonitorConfig config = MonitorConfig.builder(n).withTag(CLASS_TAG, c.getSimpleName()).build();
         return getCounter(config);
     }
 }
