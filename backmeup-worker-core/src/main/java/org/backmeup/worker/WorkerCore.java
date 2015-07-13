@@ -155,35 +155,47 @@ public class WorkerCore {
             resp = this.bmuServiceClient.initializeWorker(workerInfo);
             LOGGER.info("Initializing backmeup-worker - bmu service handshake done");
         } catch (BackMeUpException e) {
-            LOGGER.info("Initializing backmeup-worker - bmu service handshake failed");
+            LOGGER.error("Initializing backmeup-worker - bmu service handshake failed", e);
         }
+        
+        try {
+            this.backupName = resp.getBackupNameTemplate();
 
-        this.backupName = resp.getBackupNameTemplate();
+            if (resp.getDistributionMechanism() == DistributionMechanism.QUEUE) {
+                final StringTokenizer tokenizer = new StringTokenizer(resp.getConnectionInfo(), ";");
+                final String mqHost = tokenizer.nextToken();
+                final String mqName = tokenizer.nextToken();
 
-        if (resp.getDistributionMechanism() == DistributionMechanism.QUEUE) {
-            final StringTokenizer tokenizer = new StringTokenizer(resp.getConnectionInfo(), ";");
-            final String mqHost = tokenizer.nextToken();
-            final String mqName = tokenizer.nextToken();
+                this.jobReceiver = new RabbitMQJobReceiver(mqHost, mqName, 500);
+                this.jobReceiver.initialize();
+                this.jobReceiver
+                        .addJobReceivedListener(new JobReceivedListener() {
+                            @Override
+                            public void jobReceived(JobReceivedEvent jre) {
+                                executeBackupJob(jre);
+                            }
+                        });
+            } else {
+                // DistributionMechanism not supported
+                errorsDuringInit = true;
+            }
 
-            this.jobReceiver = new RabbitMQJobReceiver(mqHost, mqName, 500);
-            this.jobReceiver.initialize();
-            this.jobReceiver.addJobReceivedListener(new JobReceivedListener() {
-                @Override
-                public void jobReceived(JobReceivedEvent jre) {
-                    executeBackupJob(jre);
-                }
-            });
-        } else {
-            // DistributionMechanism not supported
+        } catch (Exception e) {
+            LOGGER.error("Error setting worker configuraiton", e);
             errorsDuringInit = true;
         }
 
-        // Initialize plugins infrastructure and load all plugins
-        String pluginsDeploymentDir = Configuration.getProperty("backmeup.osgi.deploymentDirectory");
-        String pluginsTempDir = Configuration.getProperty("backmeup.osgi.temporaryDirectory");
-        String pluginsExportedPackages = resp.getPluginsExportedPackages();
-        this.pluginManager = new PluginManager(pluginsDeploymentDir, pluginsTempDir, pluginsExportedPackages);
-        this.pluginManager.startup();
+        try {
+            // Initialize plugins infrastructure and load all plugins
+            String pluginsDeploymentDir = Configuration.getProperty("backmeup.osgi.deploymentDirectory");
+            String pluginsTempDir = Configuration.getProperty("backmeup.osgi.temporaryDirectory");
+            String pluginsExportedPackages = resp.getPluginsExportedPackages();
+            this.pluginManager = new PluginManager(pluginsDeploymentDir, pluginsTempDir, pluginsExportedPackages);
+            this.pluginManager.startup();
+        } catch (Exception e) {
+            LOGGER.error("Error initializing plugin infrastructure", e);
+            errorsDuringInit = true;
+        }
 
         // Startup method should block until plugin infrastructure is
         // fully initialized and all plugins are loaded

@@ -17,18 +17,22 @@ public final class JobMetrics {
     public static final String OBJECTS_RECEIVED = "objectsReceived";
     public static final String OBJECTS_SENT = "objectsSent";
 
-    private static final ConcurrentMap<MonitorConfig, Counter> counters = new ConcurrentHashMap<MonitorConfig, Counter>();
+    private static final ConcurrentMap<MonitorConfig, Counter> COUNTERS = new ConcurrentHashMap<MonitorConfig, Counter>();
+    
+    private JobMetrics() {
+        // Utility classes should not have public constructor
+    }
 
     public static Counter getCounter(MonitorConfig config) {
-        Counter v = counters.get(config);
-        if (v != null)
+        Counter v = COUNTERS.get(config);
+        if (v != null) {
             return v;
-        else {
+        } else {
             Counter counter = new BasicCounter(config);
-            Counter prevCounter = counters.putIfAbsent(config, counter);
-            if (prevCounter != null)
+            Counter prevCounter = COUNTERS.putIfAbsent(config, counter);
+            if (prevCounter != null) {
                 return prevCounter;
-            else {
+            } else {
                 DefaultMonitorRegistry.getInstance().register(counter);
                 return counter;
             }

@@ -21,10 +21,11 @@ public class BackmeupMetricBatchedObserver implements MetricObserver {
     private static final int BATCH_SIZE_DEFAULT = 1000;
     private static final String METRIC_PREFIX_DEFAULT = "backmeup.worker";
 
+    private static final int pushQueueSize = 1000;
+    private static final long sendTimeoutMs = 1000;
+    
     private final String metricPrefix;
-    private final int pushQueueSize = 1000;
     private final int batchSize;
-    private final long sendTimeoutMs = 1000;
     private final BackmeupService backmeupServiceClient;
 
     private final BlockingQueue<UpdateTask> pushQueue = new LinkedBlockingQueue<UpdateTask>(pushQueueSize);
@@ -70,14 +71,14 @@ public class BackmeupMetricBatchedObserver implements MetricObserver {
         int i = 0;
         while (i < numMetrics) {
             final int remaining = numMetrics - i;
-            final int batchSize = Math.min(remaining, this.batchSize);
-            final Metric[] batch = new Metric[batchSize];
-            System.arraycopy(atlasMetrics, i, batch, 0, batchSize);
+            final int bSize = Math.min(remaining, this.batchSize);
+            final Metric[] batch = new Metric[bSize];
+            System.arraycopy(atlasMetrics, i, batch, 0, bSize);
             
-            UpdateTask task = new UpdateTask(batchSize, batch);
+            UpdateTask task = new UpdateTask(bSize, batch);
             sendToQueue(task);
             
-            i += batchSize;
+            i += bSize;
         }
     }
 
@@ -92,19 +93,16 @@ public class BackmeupMetricBatchedObserver implements MetricObserver {
         }
 
         int totalSent = 0;
-        try {
-            List<WorkerMetricDTO> workerMetrics = new ArrayList<>(updateTasks.metrics.length);
-            for(Metric m : updateTasks.metrics) {
-                WorkerMetricDTO metric = new WorkerMetricDTO();
-                metric.setTimestamp(new Date(m.getTimestamp()));
-                metric.setMetric( m.getConfig().getName());
-                metric.setValue(m.getNumberValue().doubleValue());
-                workerMetrics.add(metric);
-            }
-            this.backmeupServiceClient.addWorkerMetrics(workerMetrics);
-            LOGGER.debug("Sent {}/{} metrics to backmeup-service", totalSent, updateTasks.numMetrics);
-        } finally {
+        List<WorkerMetricDTO> workerMetrics = new ArrayList<>(updateTasks.metrics.length);
+        for(Metric m : updateTasks.metrics) {
+            WorkerMetricDTO metric = new WorkerMetricDTO();
+            metric.setTimestamp(new Date(m.getTimestamp()));
+            metric.setMetric( m.getConfig().getName());
+            metric.setValue(m.getNumberValue().doubleValue());
+            workerMetrics.add(metric);
         }
+        this.backmeupServiceClient.addWorkerMetrics(workerMetrics);
+        LOGGER.debug("Sent {}/{} metrics to backmeup-service", totalSent, updateTasks.numMetrics);
     }
     
     private void sendToQueue(UpdateTask task) {
