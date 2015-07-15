@@ -10,6 +10,7 @@ import org.backmeup.service.client.BackmeupService;
 import com.netflix.servo.publish.AsyncMetricObserver;
 import com.netflix.servo.publish.BasicMetricFilter;
 import com.netflix.servo.publish.FileMetricObserver;
+import com.netflix.servo.publish.MemoryMetricObserver;
 import com.netflix.servo.publish.MetricObserver;
 import com.netflix.servo.publish.MetricPoller;
 import com.netflix.servo.publish.MonitorRegistryMetricPoller;
@@ -20,6 +21,10 @@ public final class PerformanceMonitor {
     private static final long HEARTBEAT_INTERVAL = 10;
     private static List<MetricObserver> observers = new ArrayList<MetricObserver>();
 
+    public static void initialize() {
+        observers.add(createMemoryMetricObserver());
+    }
+    
     public static void initialize(String fileName) {
         observers.add(createFileObserver(fileName));
     }
@@ -37,6 +42,10 @@ public final class PerformanceMonitor {
         schedule(new MonitorRegistryMetricPoller(), observers);
         schedule(new OperatingSystemMetricPoller(), observers);
         schedule(new RuntimeMetricPoller(), observers);
+    }
+    
+    private static MetricObserver createMemoryMetricObserver() {
+        return transformCountertoRate(new MemoryMetricObserver());
     }
 
     private static MetricObserver createFileObserver(String fileName) {
