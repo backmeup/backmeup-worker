@@ -222,7 +222,11 @@ public class WorkerCore {
             }
         });
         
-        PerformanceMonitor.initialize(bmuServiceClient);
+        if (Boolean.parseBoolean(Configuration.getProperty("backmeup.worker.publishMetrics", "false"))) {
+            PerformanceMonitor.initialize(bmuServiceClient);
+        } else {
+            PerformanceMonitor.initialize();
+        }
 
         if (!errorsDuringInit) {
             setCurrentState(WorkerState.IDLE);
