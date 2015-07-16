@@ -15,7 +15,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.backmeup.model.dto.WorkerConfigDTO;
 import org.backmeup.model.dto.WorkerConfigDTO.DistributionMechanism;
 import org.backmeup.model.dto.WorkerInfoDTO;
-import org.backmeup.model.exceptions.BackMeUpException;
 import org.backmeup.plugin.infrastructure.PluginManager;
 import org.backmeup.service.client.BackmeupService;
 import org.backmeup.service.client.impl.BackmeupServiceClient;
@@ -36,7 +35,8 @@ import com.netflix.servo.monitor.NumberGauge;
 
 public class WorkerCore {
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkerCore.class);
-
+    private static final int WORKER_CONFIG_TIMEOUT_SECONDS = 60;
+    
     private final UUID workerId;
     private String workerName;
 
@@ -148,15 +148,7 @@ public class WorkerCore {
         boolean errorsDuringInit = false;
 
         WorkerInfoDTO workerInfo = getWorkerInfo();
-
-        WorkerConfigDTO resp = null;
-        try {
-            //bmu service rest initialization might not yet have been properly completed at startup 
-            resp = this.bmuServiceClient.initializeWorker(workerInfo);
-            LOGGER.info("Initializing backmeup-worker - bmu service handshake done");
-        } catch (BackMeUpException e) {
-            LOGGER.error("Initializing backmeup-worker - bmu service handshake failed", e);
-        }
+        WorkerConfigDTO resp = getWorkerConfig(workerInfo, WORKER_CONFIG_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         
         try {
             this.backupName = resp.getBackupNameTemplate();
@@ -286,7 +278,7 @@ public class WorkerCore {
     }
 
     private WorkerInfoDTO getWorkerInfo() {
-        WorkerInfoDTO workerInfo = new WorkerInfoDTO();
+        final WorkerInfoDTO workerInfo = new WorkerInfoDTO();
 
         workerInfo.setWorkerId(this.workerId);
         workerInfo.setWorkerName(this.workerName);
@@ -299,6 +291,42 @@ public class WorkerCore {
         workerInfo.setTotalSpace(totalSpace);
 
         return workerInfo;
+    }
+    
+    private WorkerConfigDTO getWorkerConfig(WorkerInfoDTO workerInfo, long timeout, TimeUnit timeUnit) {
+        LOGGER.info("Obtaining worker config");
+        
+        int retries = 0;
+        final int sleepTime = 1000;
+        final long startTime = System.currentTimeMillis();
+        final long abortTime = timeUnit.toMillis(timeout);
+        WorkerConfigDTO config = null;
+        
+        while ((config == null) && ((System.currentTimeMillis() - startTime) < abortTime)) {
+            try {
+                if (retries != 0) {
+                    LOGGER.info(String.format("Obtaining worker config failed, retrying (#%d)...", retries));
+                }
+                config = this.bmuServiceClient.initializeWorker(workerInfo);
+            } catch (Exception e) {
+                LOGGER.error("", e);
+            } finally {
+                retries++;
+                try {
+                    Thread.sleep(sleepTime);
+                } catch (InterruptedException e) {
+                    LOGGER.error("", e);
+                }
+            }
+        }
+
+        if (config != null) {
+            LOGGER.info("Obtaining worker config successful");
+            return config;
+        } else {
+            LOGGER.info("Obtaining worker config failed");
+            throw new WorkerException("Failed obtaining worker configuration");
+        }
     }
 
     // Nested classes and enums -----------------------------------------------
