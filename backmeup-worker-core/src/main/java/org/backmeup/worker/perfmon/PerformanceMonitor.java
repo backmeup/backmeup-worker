@@ -20,6 +20,10 @@ import com.netflix.servo.publish.PollScheduler;
 public final class PerformanceMonitor {
     private static final long HEARTBEAT_INTERVAL = 10;
     private static List<MetricObserver> observers = new ArrayList<MetricObserver>();
+    
+    private PerformanceMonitor() {
+        
+    }
 
     public static void initialize() {
         observers.add(createMemoryMetricObserver());
