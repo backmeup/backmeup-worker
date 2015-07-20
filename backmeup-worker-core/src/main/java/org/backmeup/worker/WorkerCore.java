@@ -49,9 +49,9 @@ public class WorkerCore {
     private final AtomicInteger noOfFinishedJobs;
     private final AtomicInteger noOfFaildJobs;
     
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "PMD.SingularField"})
     private final NumberGauge maxJobsGauge;
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "PMD.SingularField"})
     private final NumberGauge noOfRunningJobsGauge;
 
     private PluginManager pluginManager;

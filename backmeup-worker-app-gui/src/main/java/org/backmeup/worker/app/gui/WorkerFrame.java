@@ -40,6 +40,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
 
+@SuppressWarnings("PMD.SingularField")
 public class WorkerFrame extends JFrame {
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkerFrame.class);
 
