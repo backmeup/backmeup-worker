@@ -21,14 +21,14 @@ public class BackmeupMetricBatchedObserver implements MetricObserver {
     private static final int BATCH_SIZE_DEFAULT = 1000;
     private static final String METRIC_PREFIX_DEFAULT = "backmeup.worker";
 
-    private static final int pushQueueSize = 1000;
-    private static final long sendTimeoutMs = 1000;
+    private static final int PUSH_QUEUE_SIZE = 1000;
+    private static final long SEND_TIMEOUT_MS = 1000;
     
     private final String metricPrefix;
     private final int batchSize;
     private final BackmeupService backmeupServiceClient;
 
-    private final BlockingQueue<UpdateTask> pushQueue = new LinkedBlockingQueue<UpdateTask>(pushQueueSize);
+    private final BlockingQueue<UpdateTask> pushQueue = new LinkedBlockingQueue<UpdateTask>(PUSH_QUEUE_SIZE);
 
     // Whether we should send metrics. May be used when running in dev environment.
     private volatile boolean sendMetrics = true;
