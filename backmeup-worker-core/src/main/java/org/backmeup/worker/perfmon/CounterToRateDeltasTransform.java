@@ -106,7 +106,7 @@ public final class CounterToRateDeltasTransform implements MetricObserver {
     private boolean isJobMetric(Metric m) {
         final TagList tags = m.getConfig().getTags();
         final String classTag = tags.getValue(JobMetrics.CLASS_TAG);
-        return classTag != null && BackupJobRunner.class.getSimpleName().equals(classTag);
+        return classTag != null && classTag.equals(BackupJobRunner.class.getSimpleName());
     }
     
     private boolean isZero(double value, double threshold){

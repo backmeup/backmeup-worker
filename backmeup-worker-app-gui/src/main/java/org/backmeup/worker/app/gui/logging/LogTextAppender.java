@@ -16,6 +16,9 @@ import ch.qos.logback.core.encoder.EchoEncoder;
 import ch.qos.logback.core.encoder.Encoder;
 
 public class LogTextAppender extends AppenderBase<ILoggingEvent> {
+    private static final String ROOT_LOGGER_NAME = "ROOT";
+    private static final String OUTPUT_ENCODING = "UTF-8";
+    
     private Encoder<ILoggingEvent> encoder = new EchoEncoder<>();
     private ByteArrayOutputStream out = new ByteArrayOutputStream();
 
@@ -24,9 +27,8 @@ public class LogTextAppender extends AppenderBase<ILoggingEvent> {
     public LogTextAppender(JTextArea jTextArea) {
         this.jTextArea = jTextArea;
         LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
+        lc.getLogger(ROOT_LOGGER_NAME).addAppender(this);
         setContext(lc);
-        start();
-        lc.getLogger("ROOT").addAppender(this);
     }
 
     @Override
@@ -44,7 +46,7 @@ public class LogTextAppender extends AppenderBase<ILoggingEvent> {
         try {
             encoder.doEncode(event);
             out.flush();
-            final String line = out.toString();
+            final String line = out.toString(OUTPUT_ENCODING);
 
             SwingUtilities.invokeLater(new Runnable() {
                 @Override
