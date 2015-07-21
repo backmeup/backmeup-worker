@@ -1,6 +1,7 @@
 package org.backmeup.worker.perfmon;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -19,12 +20,9 @@ public class BackmeupMetricBatchedObserver implements MetricObserver {
     private static final Logger LOGGER = LoggerFactory.getLogger(BackmeupMetricBatchedObserver.class);
 
     private static final int BATCH_SIZE_DEFAULT = 1000;
-    private static final String METRIC_PREFIX_DEFAULT = "backmeup.worker";
-
     private static final int PUSH_QUEUE_SIZE = 1000;
     private static final long SEND_TIMEOUT_MS = 1000;
     
-    private final String metricPrefix;
     private final int batchSize;
     private final BackmeupService backmeupServiceClient;
 
@@ -34,16 +32,11 @@ public class BackmeupMetricBatchedObserver implements MetricObserver {
     private volatile boolean sendMetrics = true;
 
     public BackmeupMetricBatchedObserver(BackmeupService backmeupServiceClient) {
-        this(backmeupServiceClient, METRIC_PREFIX_DEFAULT, BATCH_SIZE_DEFAULT);
+        this(backmeupServiceClient, BATCH_SIZE_DEFAULT);
     }
 
-    public BackmeupMetricBatchedObserver(BackmeupService backmeupServiceClient, String metricPrefix) {
-        this(backmeupServiceClient, metricPrefix, BATCH_SIZE_DEFAULT);
-    }
-
-    public BackmeupMetricBatchedObserver(BackmeupService backmeupServiceClient, String metricPrefix, int batchSize) {
+    public BackmeupMetricBatchedObserver(BackmeupService backmeupServiceClient, int batchSize) {
         this.backmeupServiceClient = backmeupServiceClient;
-        this.metricPrefix = metricPrefix;
         this.batchSize = batchSize;
 
         final Thread pushThread = new Thread(new PushProcessor(), "BackmeupMetricObserver-Push");
@@ -74,8 +67,7 @@ public class BackmeupMetricBatchedObserver implements MetricObserver {
             final int bSize = Math.min(remaining, this.batchSize);
             final Metric[] batch = new Metric[bSize];
             System.arraycopy(atlasMetrics, i, batch, 0, bSize);
-            
-            UpdateTask task = new UpdateTask(bSize, batch);
+            UpdateTask task = new UpdateTask(batch);
             sendToQueue(task);
             
             i += bSize;
@@ -126,9 +118,9 @@ public class BackmeupMetricBatchedObserver implements MetricObserver {
         private final int numMetrics;
         private final Metric[] metrics;
 
-        UpdateTask(int numMetrics, Metric[] metrics) {
-            this.numMetrics = numMetrics;
-            this.metrics = metrics;
+        UpdateTask(Metric[] metrics) {
+            this.numMetrics = metrics.length;
+            this.metrics = Arrays.copyOf(metrics, metrics.length);
         }
 
         @Override
