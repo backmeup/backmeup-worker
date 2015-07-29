@@ -2,12 +2,16 @@ package org.backmeup.worker.app.servlet;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.backmeup.worker.WorkerCore;
+import org.backmeup.worker.WorkerInitialisationTask;
 import org.backmeup.worker.app.servlet.model.WorkerData;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
@@ -21,29 +25,34 @@ public class WorkerServlet extends HttpServlet {
 
     public WorkerServlet() {
         LOGGER.info("Starting backmeup worker core");
-        worker = new WorkerCore();
+        this.worker = new WorkerCore();
     }
 
+    // Servlet initialisation -----------------------------------------
     @Override
     public void init() {
-        LOGGER.info("Initializing worker");
-        worker.initialize();
-        LOGGER.info("Initializing worker done.");
+        initWorkerAfterServletInitialisation();
+    }
 
-        LOGGER.info("Starting worker");
-        worker.start();
-        LOGGER.info("Starting worker done.");
+    // Servlet initialisation thread due to-----------------------------------------
+    // @see http://themis-buildsrv01.backmeup.at/redmine/issues/232
+    public void initWorkerAfterServletInitialisation() {
+        final ScheduledExecutorService exec = Executors.newScheduledThreadPool(1);
+        WorkerInitialisationTask task = new WorkerInitialisationTask(this.worker);
+        int SECONDS_BEFORE_INITIALISATION = 15;
+        exec.schedule(task, SECONDS_BEFORE_INITIALISATION, TimeUnit.SECONDS);
+        LOGGER.info("scheduled worker initialisation in " + SECONDS_BEFORE_INITIALISATION + " seconds.");
     }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         WorkerData workerData = new WorkerData();
-        workerData.setWorkerState(worker.getCurrentState());
-        workerData.setNoOfCurrentJobs(worker.getNoOfCurrentJobs());
-        workerData.setNoOfMaximumJobs(worker.getNoOfMaximumJobs());
-        workerData.setNoOfFetchedJobs(worker.getNoOfFetchedJobs());
-        workerData.setNoOfFinishedJobs(worker.getNoOfFinishedJobs());
-        workerData.setNoOfFailedJobs(worker.getNoOfFailedJobs());
+        workerData.setWorkerState(this.worker.getCurrentState());
+        workerData.setNoOfCurrentJobs(this.worker.getNoOfCurrentJobs());
+        workerData.setNoOfMaximumJobs(this.worker.getNoOfMaximumJobs());
+        workerData.setNoOfFetchedJobs(this.worker.getNoOfFetchedJobs());
+        workerData.setNoOfFinishedJobs(this.worker.getNoOfFinishedJobs());
+        workerData.setNoOfFailedJobs(this.worker.getNoOfFailedJobs());
 
         response.setContentType("application/json");
 
@@ -63,7 +72,7 @@ public class WorkerServlet extends HttpServlet {
     @Override
     public void destroy() {
         LOGGER.info("Shutting down backmeup worker core");
-        worker.shutdown();
+        this.worker.shutdown();
         LOGGER.info("Shutdown complete");
     }
 }
