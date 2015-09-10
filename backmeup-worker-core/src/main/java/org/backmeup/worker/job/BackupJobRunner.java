@@ -6,17 +6,17 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 import org.backmeup.model.constants.JobExecutionStatus;
 import org.backmeup.model.dto.BackupJobExecutionDTO;
 import org.backmeup.model.dto.PluginProfileDTO;
 import org.backmeup.model.spi.PluginDescribable;
-import org.backmeup.plugin.api.connectors.Action;
-import org.backmeup.plugin.api.connectors.ActionException;
-import org.backmeup.plugin.api.connectors.Datasink;
-import org.backmeup.plugin.api.connectors.Datasource;
-import org.backmeup.plugin.api.connectors.Progressable;
+import org.backmeup.plugin.api.Action;
+import org.backmeup.plugin.api.ActionException;
+import org.backmeup.plugin.api.Datasink;
+import org.backmeup.plugin.api.Datasource;
+import org.backmeup.plugin.api.PluginContext;
+import org.backmeup.plugin.api.Progressable;
 import org.backmeup.plugin.api.storage.Storage;
 import org.backmeup.plugin.api.storage.StorageException;
 import org.backmeup.plugin.infrastructure.PluginManager;
@@ -30,7 +30,6 @@ import com.netflix.servo.monitor.Counter;
 /**
  * Implements the actual BackupJob execution.
  */
-@SuppressWarnings(value = { "all" })
 public class BackupJobRunner {
     private static final Logger LOGGER = LoggerFactory.getLogger(BackupJobRunner.class);
 
@@ -71,49 +70,24 @@ public class BackupJobRunner {
             String tmpDir = generateTmpDirName(backupJob, backupJob.getSource());
             storage.open(tmpDir);
             
+            // Prepare context object -----------------------------------------
+            // Make properties global for the action loop. So the plugins can 
+            // communicate (e.g. filesplit and encryption plugins)
+            PluginContext pluginContext = new PluginContext();
+            pluginContext.setAttribute("org.backmaup.tmpdir", getLastSplitElement(tmpDir, "/"));
+            pluginContext.setAttribute("org.backmeup.userid", backupJob.getUser().getUserId().toString());
+            
             // Prepare source plugin data -------------------------------------
-            
             Datasource source = this.pluginManager.getDatasource(backupJob.getSource().getPluginId());
-            Map<String, String> sourceAuthData = new HashMap<String, String>();
-            if (backupJob.getSource().getAuthData() != null) {
-                sourceAuthData = backupJob.getSource().getAuthData().getProperties();
-            }
-            Map<String, String> sourceProperties = backupJob.getSource().getProperties();
-            if(sourceProperties == null) sourceProperties = new HashMap<String, String>();
-            List<String> sourceOptions = backupJob.getSource().getOptions();
-            if(sourceOptions == null) sourceOptions = new ArrayList<String>();
-            
 
             // Prepare sink plugin data ---------------------------------------
-            
             Datasink sink = this.pluginManager.getDatasink(backupJob.getSink().getPluginId());
-            Map<String, String> sinkAuthData = new HashMap<String, String>();
-            if (backupJob.getSink().getAuthData() != null) {
-                sinkAuthData = backupJob.getSink().getAuthData().getProperties();
-            }
-            
-            sinkAuthData.put("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
-            sinkAuthData.put("org.backmeup.userid", backupJob.getUser().getUserId() + "");
-
-            Map<String, String> sinkProperties = backupJob.getSink().getProperties();
-            if(sinkProperties == null) sinkProperties = new HashMap<String, String>();
-            List<String> sinkOptions = backupJob.getSink().getOptions();
-            if(sinkOptions == null) sinkOptions = new ArrayList<String>();
-            
 
             // Download from source -------------------------------------------
             LOGGER.info("Job {} downloading", backupJob.getId());
-            source.downloadAll(sourceAuthData, sourceProperties, sourceOptions, storage, 
-                    new JobStatusProgressor(backupJob, "datasource"));
+            source.downloadAll(backupJob.getSource(), pluginContext, storage, new JobStatusProgressor(backupJob, "datasource"));
             bytesReceived.increment(storage.getDataObjectSize());
             objectsReceived.increment(storage.getDataObjectCount());
-            
-            // Prepare plugin data for actions --------------------------------
-            // Make properties global for the action loop. So the plugins can 
-            // communicate (e.g. filesplit and encryption plugins)
-            Map<String, String> params = new HashMap<>();
-            params.putAll(sinkAuthData);
-            params.putAll(sourceAuthData);
             
             // if no actions are specified for this backup job,
             // initialize field with empty list
@@ -133,7 +107,7 @@ public class BackupJobRunner {
 
             // Run indexing in case the user has enabled it using the 'enable.indexing' user property
             // We're using true as the default value for now
-            boolean doIndexing = true;
+            boolean doIndexing = false;
 
             // has the indexer been requested during creation of the backup job?
             List<PluginProfileDTO> actions = backupJob.getActions();
@@ -164,19 +138,17 @@ public class BackupJobRunner {
                     LOGGER.info("Job {} processing action {}", backupJob.getId(), actionId);
                      if (INDEXER_BACKMEUP_PLUGIN_ID.equals(actionId)) {
                         if (doIndexing) {
-                            //hand over information from PluginDescribable, etc. to indexAction
-                            PluginDescribable pluginDescr = this.pluginManager.getPluginDescribableById(backupJob.getSink().getPluginId());
-                            Map<String, String> p = pluginDescr.getMetadata(sinkAuthData);
-                            //add the BMU_filegenerator_530_26_01_2015_12_56 prefix for indexer plugin
-                            p.put("org.backmeup.bmuprefix", getLastSplitElement(tmpDir, "/"));
-                            //add 
-                            p.put("org.backmeup.thumbnails.tmpdir",
-                                    "/data/thumbnails/" + getLastSplitElement(tmpDir, "/"));
-                            doIndexing(p, params, storage, backupJob);
+                            // hand over information from PluginDescribable, etc. to indexAction
+//                            PluginDescribable pluginDescr = this.pluginManager.getPluginDescribableById(backupJob.getSink().getPluginId());
+//                            Map<String, String> p = pluginDescr.getMetadata(backupJob.getSink().getAuthData().getProperties());
+
+                            pluginContext.setAttribute("org.backmeup.bmuprefix", getLastSplitElement(tmpDir, "/"));
+                            pluginContext.setAttribute("org.backmeup.thumbnails.tmpdir", "/data/thumbnails/" + getLastSplitElement(tmpDir, "/"));
+                            doIndexing(actionProfile, pluginContext, storage, backupJob);
                         }
                     } else {
                         action = this.pluginManager.getAction(actionId);
-                        action.doAction(null, params, null, storage, backupJob, new JobStatusProgressor(backupJob, "action"));
+                        action.doAction(actionProfile, pluginContext, storage, new JobStatusProgressor(backupJob, "action"));
                     }
                 } catch (ActionException e) {
                     LOGGER.info("Job {} processing action {} failed with exception: {}", backupJob.getId(), actionId, e);
@@ -185,8 +157,7 @@ public class BackupJobRunner {
 
             // Upload to sink -------------------------------------------------
             LOGGER.info("Job {} uploading", backupJob.getId());
-            sink.upload(sinkAuthData, sinkProperties, sinkOptions, storage, 
-                    new JobStatusProgressor(backupJob, "datasink"));
+            sink.upload(backupJob.getSink(), pluginContext, storage, new JobStatusProgressor(backupJob, "datasink"));
             bytesSent.increment(storage.getDataObjectSize());
             objectsSent.increment(storage.getDataObjectCount());
 
@@ -209,15 +180,15 @@ public class BackupJobRunner {
         }
     }
 
-    private void doIndexing(Map<String, String> properties, Map<String, String> params, Storage storage, BackupJobExecutionDTO job)
-            throws ActionException {
+    private void doIndexing(PluginProfileDTO profile, PluginContext context, Storage storage, BackupJobExecutionDTO job)
+            throws ActionException, StorageException {
         // If we do indexing, the Thumbnail renderer needs to run before!
         Action thumbnailAction = this.pluginManager.getAction("org.backmeup.thumbnail");
-        thumbnailAction.doAction(null, properties, null, storage, job, new JobStatusProgressor(job, "thumbnailAction"));
+        thumbnailAction.doAction(profile, context, storage, new JobStatusProgressor(job, "thumbnailAction"));
 
         // After thumbnail rendering, run indexing
         Action indexAction = this.pluginManager.getAction("org.backmeup.indexing");
-        indexAction.doAction(null, properties, null, storage, job, new JobStatusProgressor(job, "indexaction"));
+        indexAction.doAction(profile, context, storage, new JobStatusProgressor(job, "indexaction"));
     }
 
     private String generateTmpDirName(BackupJobExecutionDTO job, PluginProfileDTO profile) {
@@ -245,13 +216,6 @@ public class BackupJobRunner {
         }
     }
     
-    private Map<String, String> convertPropertiesToMap (Properties properties) {
-        Map<String, String> map = new HashMap<>();
-        for (final String name: properties.stringPropertyNames()) {
-            map.put(name, properties.getProperty(name));
-        }
-        return map;
-    }
 
     private class JobStatusProgressor implements Progressable {
 
