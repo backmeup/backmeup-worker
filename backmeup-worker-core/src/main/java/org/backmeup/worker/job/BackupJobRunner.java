@@ -77,6 +77,9 @@ public class BackupJobRunner {
             pluginContext.setAttribute("org.backmaup.tmpdir", getLastSplitElement(tmpDir, "/"));
             pluginContext.setAttribute("org.backmeup.userid", backupJob.getUser().getUserId().toString());
             
+            // TODO: Remove this workaround for indexing action
+            pluginContext.setAttribute("org.backmeup.job", backupJob, true);
+            
             // Prepare source plugin data -------------------------------------
             Datasource source = this.pluginManager.getDatasource(backupJob.getSource().getPluginId());
 
