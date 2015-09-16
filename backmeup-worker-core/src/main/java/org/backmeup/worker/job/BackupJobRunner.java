@@ -73,7 +73,7 @@ public class BackupJobRunner {
             // Make properties global for the action loop. So the plugins can 
             // communicate (e.g. filesplit and encryption plugins)
             PluginContext pluginContext = new PluginContext();
-            pluginContext.setAttribute("org.backmaup.tmpdir", getLastSplitElement(tmpDir, "/"));
+            pluginContext.setAttribute("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
             pluginContext.setAttribute("org.backmeup.userid", backupJob.getUser().getUserId().toString());
             
             // TODO: Remove this workaround for indexing action
