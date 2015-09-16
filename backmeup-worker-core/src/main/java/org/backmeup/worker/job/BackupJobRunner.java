@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.backmeup.model.constants.JobExecutionStatus;
 import org.backmeup.model.dto.BackupJobExecutionDTO;
@@ -110,7 +109,7 @@ public class BackupJobRunner {
 
             // Run indexing in case the user has enabled it using the 'enable.indexing' user property
             // We're using true as the default value for now
-            boolean doIndexing = false;
+            boolean doIndexing = true;
 
             // has the indexer been requested during creation of the backup job?
             List<PluginProfileDTO> actions = backupJob.getActions();
