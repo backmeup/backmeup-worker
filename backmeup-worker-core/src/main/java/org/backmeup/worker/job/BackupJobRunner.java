@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.backmeup.model.constants.JobExecutionStatus;
 import org.backmeup.model.dto.BackupJobExecutionDTO;
@@ -14,6 +15,7 @@ import org.backmeup.plugin.api.Action;
 import org.backmeup.plugin.api.ActionException;
 import org.backmeup.plugin.api.Datasink;
 import org.backmeup.plugin.api.Datasource;
+import org.backmeup.plugin.api.Metadata;
 import org.backmeup.plugin.api.PluginContext;
 import org.backmeup.plugin.api.Progressable;
 import org.backmeup.plugin.api.storage.Storage;
@@ -40,12 +42,12 @@ public class BackupJobRunner {
 
     private final PluginManager pluginManager;
     private final BackmeupService bmuService;
-    
-    private final Counter bytesReceived =   JobMetrics.getCounter(BackupJobRunner.class, JobMetrics.BYTES_RECEIVED);
-    private final Counter bytesSent =       JobMetrics.getCounter(BackupJobRunner.class, JobMetrics.BYTES_SENT);
+
+    private final Counter bytesReceived = JobMetrics.getCounter(BackupJobRunner.class, JobMetrics.BYTES_RECEIVED);
+    private final Counter bytesSent = JobMetrics.getCounter(BackupJobRunner.class, JobMetrics.BYTES_SENT);
     private final Counter objectsReceived = JobMetrics.getCounter(BackupJobRunner.class, JobMetrics.OBJECTS_RECEIVED);
-    private final Counter objectsSent =     JobMetrics.getCounter(BackupJobRunner.class, JobMetrics.OBJECTS_SENT);
-    
+    private final Counter objectsSent = JobMetrics.getCounter(BackupJobRunner.class, JobMetrics.OBJECTS_SENT);
+
     public BackupJobRunner(PluginManager pluginManager, BackmeupService bmuService, String jobTempDir, String backupName) {
         this.pluginManager = pluginManager;
         this.bmuService = bmuService;
@@ -53,11 +55,11 @@ public class BackupJobRunner {
         this.backupNameTemplate = backupName;
     }
 
-    public void executeBackup(Long jobExecutionId, Storage storage) throws StorageException {        
+    public void executeBackup(Long jobExecutionId, Storage storage) throws StorageException {
         BackupJobExecutionDTO backupJob = this.bmuService.getBackupJobExecution(jobExecutionId, true);
-        
+
         LOGGER.info("Job execution with id {} started for user {}", backupJob.getId(), backupJob.getUser().getUserId());
-        
+
         backupJob.setStart(new Date());
         backupJob.setStatus(JobExecutionStatus.RUNNING);
 
@@ -68,17 +70,17 @@ public class BackupJobRunner {
             // This storage is used to temporarily store the data while executing the job
             String tmpDir = generateTmpDirName(backupJob, backupJob.getSource());
             storage.open(tmpDir);
-            
+
             // Prepare context object -----------------------------------------
             // Make properties global for the action loop. So the plugins can 
             // communicate (e.g. filesplit and encryption plugins)
             PluginContext pluginContext = new PluginContext();
             pluginContext.setAttribute("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
             pluginContext.setAttribute("org.backmeup.userid", backupJob.getUser().getUserId().toString());
-            
+
             // TODO: Remove this workaround for indexing action
             pluginContext.setAttribute("org.backmeup.job", backupJob, true);
-            
+
             // Prepare source plugin data -------------------------------------
             Datasource source = this.pluginManager.getDatasource(backupJob.getSource().getPluginId());
 
@@ -88,20 +90,20 @@ public class BackupJobRunner {
             // Download from source -------------------------------------------
             LOGGER.info("Job {} downloading", backupJob.getId());
             source.downloadAll(backupJob.getSource(), pluginContext, storage, new JobStatusProgressor(backupJob, "datasource"));
-            bytesReceived.increment(storage.getDataObjectSize());
-            objectsReceived.increment(storage.getDataObjectCount());
-            
+            this.bytesReceived.increment(storage.getDataObjectSize());
+            this.objectsReceived.increment(storage.getDataObjectCount());
+
             // if no actions are specified for this backup job,
             // initialize field with empty list
             if (backupJob.getActions() == null) {
                 backupJob.setActions(new ArrayList<PluginProfileDTO>());
             }
-            
+
             // add all properties which have been stored to the params collection
             for (PluginProfileDTO actionProfile : backupJob.getActions()) {
-//                Properties actionPropertiesProps = authenticationData.getByProfileId(actionProfile.getProfileId());
-//                Map<String, String> actionProperties = convertPropertiesToMap(actionPropertiesProps);
-//                params.putAll(actionProperties);
+                //                Properties actionPropertiesProps = authenticationData.getByProfileId(actionProfile.getProfileId());
+                //                Map<String, String> actionProperties = convertPropertiesToMap(actionPropertiesProps);
+                //                params.putAll(actionProperties);
             }
 
             // Execute actions in sequence ------------------------------------
@@ -138,14 +140,19 @@ public class BackupJobRunner {
 
                 try {
                     LOGGER.info("Job {} processing action {}", backupJob.getId(), actionId);
-                     if (INDEXER_BACKMEUP_PLUGIN_ID.equals(actionId)) {
+                    if (INDEXER_BACKMEUP_PLUGIN_ID.equals(actionId)) {
                         if (doIndexing) {
-                            // hand over information from PluginDescribable, etc. to indexAction
-//                            PluginDescribable pluginDescr = this.pluginManager.getPluginDescribableById(backupJob.getSink().getPluginId());
-//                            Map<String, String> p = pluginDescr.getMetadata(backupJob.getSink().getAuthData().getProperties());
+                            // hand over information from the PluginDescribable to the indexAction plugin
+                            PluginDescribable pluginDescr = this.pluginManager.getPluginDescribableById(backupJob.getSink().getPluginId());
+                            Map<String, String> p = pluginDescr.getMetadata(backupJob.getSink().getAuthData().getProperties());
 
+                            if ((p.get(Metadata.STORAGE_ALWAYS_ACCESSIBLE) != null) && (p.get(Metadata.DOWNLOAD_BASE) != null)) {
+                                pluginContext.setAttribute(Metadata.STORAGE_ALWAYS_ACCESSIBLE, p.get(Metadata.STORAGE_ALWAYS_ACCESSIBLE));
+                                pluginContext.setAttribute(Metadata.DOWNLOAD_BASE, p.get(Metadata.DOWNLOAD_BASE));
+                            }
                             pluginContext.setAttribute("org.backmeup.bmuprefix", getLastSplitElement(tmpDir, "/"));
-                            pluginContext.setAttribute("org.backmeup.thumbnails.tmpdir", "/data/thumbnails/" + getLastSplitElement(tmpDir, "/"));
+                            pluginContext.setAttribute("org.backmeup.thumbnails.tmpdir",
+                                    "/data/thumbnails/" + getLastSplitElement(tmpDir, "/"));
                             doIndexing(actionProfile, pluginContext, storage, backupJob);
                         }
                     } else {
@@ -160,8 +167,8 @@ public class BackupJobRunner {
             // Upload to sink -------------------------------------------------
             LOGGER.info("Job {} uploading", backupJob.getId());
             sink.upload(backupJob.getSink(), pluginContext, storage, new JobStatusProgressor(backupJob, "datasink"));
-            bytesSent.increment(storage.getDataObjectSize());
-            objectsSent.increment(storage.getDataObjectCount());
+            this.bytesSent.increment(storage.getDataObjectSize());
+            this.objectsSent.increment(storage.getDataObjectCount());
 
             // Close temp local storage-----------------------------------------
             // Closing the storage means to remove all files in the temporary directory.
@@ -202,8 +209,8 @@ public class BackupJobRunner {
         // Take only last part of "org.backmeup.xxxx" (xxxx)
         String profilename = getLastSplitElement(profile.getPluginId(), "\\.");
 
-        formatter = new SimpleDateFormat(this.backupNameTemplate.replaceAll("%PROFILEID%", profileid.toString()).replaceAll(
-                "%SOURCE%", profilename));
+        formatter = new SimpleDateFormat(this.backupNameTemplate.replaceAll("%PROFILEID%", profileid.toString()).replaceAll("%SOURCE%",
+                profilename));
 
         return this.jobTempDir + "/" + jobid + "/" + formatter.format(date);
     }
@@ -217,7 +224,6 @@ public class BackupJobRunner {
             return text;
         }
     }
-    
 
     private class JobStatusProgressor implements Progressable {
 
