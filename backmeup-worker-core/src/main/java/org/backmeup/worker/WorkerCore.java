@@ -26,6 +26,7 @@ import org.backmeup.worker.job.receiver.RabbitMQJobReceiver;
 import org.backmeup.worker.job.threadpool.ObservableThreadPoolExecutor;
 import org.backmeup.worker.job.threadpool.ThreadPoolListener;
 import org.backmeup.worker.perfmon.PerformanceMonitor;
+import org.backmeup.worker.utils.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +38,8 @@ public class WorkerCore {
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkerCore.class);
     private static final int WORKER_CONFIG_TIMEOUT_SECONDS = 60;
     
-    private final UUID workerId;
+    private final String workerId;
+    private final String workerSecret;
     private String workerName;
 
     private Boolean initialized;
@@ -66,11 +68,14 @@ public class WorkerCore {
     // Constructor ------------------------------------------------------------
 
     public WorkerCore() {
-        String wId = Configuration.getProperty("backmeup.worker.id");
-        if (wId != null) {
-            this.workerId = UUID.fromString(wId);
-        } else {
-            this.workerId = UUID.randomUUID();
+        this.workerId = Configuration.getProperty("backmeup.worker.id");
+        if (StringUtils.isEmpty(this.workerId)) {
+            throw new WorkerException("Worker id is not set");
+        }
+        
+        this.workerSecret = Configuration.getProperty("backmeup.worker.secret");
+        if (StringUtils.isEmpty(workerSecret)) {
+            throw new WorkerException("Worker id is not set");
         }
 
         String wName = Configuration.getProperty("backmeup.worker.name");
@@ -95,8 +100,7 @@ public class WorkerCore {
         this.noOfFaildJobs = new AtomicInteger(0);
 
         String bmuServiceBaseUrl = Configuration.getProperty("backmeup.service.baseUrl");
-        String bmuServiceAccessToken = Configuration.getProperty("backmeup.service.accessToken");
-        this.bmuServiceClient = new BackmeupServiceClient(bmuServiceBaseUrl, bmuServiceAccessToken);
+        this.bmuServiceClient = new BackmeupServiceClient(bmuServiceBaseUrl);
 
         this.jobTempDir = Configuration.getProperty("backmeup.worker.workDir");
 
@@ -144,6 +148,9 @@ public class WorkerCore {
     // Public Methods ---------------------------------------------------------
 
     public void initialize() {
+        LOGGER.info("Authenticate backmeup-worker");
+        bmuServiceClient.authenticateWorker(this.workerId, this.workerSecret);
+        
         LOGGER.info("Initializing backmeup-worker");
         boolean errorsDuringInit = false;
 
@@ -328,6 +335,7 @@ public class WorkerCore {
             throw new WorkerException("Failed obtaining worker configuration");
         }
     }
+    
 
     // Nested classes and enums -----------------------------------------------
 
