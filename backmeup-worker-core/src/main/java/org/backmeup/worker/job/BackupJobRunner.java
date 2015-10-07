@@ -1,7 +1,6 @@
 package org.backmeup.worker.job;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -17,12 +16,12 @@ import org.backmeup.plugin.api.Datasink;
 import org.backmeup.plugin.api.Datasource;
 import org.backmeup.plugin.api.Metadata;
 import org.backmeup.plugin.api.PluginContext;
-import org.backmeup.plugin.api.Progressable;
 import org.backmeup.plugin.api.storage.Storage;
 import org.backmeup.plugin.api.storage.StorageException;
 import org.backmeup.plugin.infrastructure.PluginManager;
 import org.backmeup.service.client.BackmeupService;
 import org.backmeup.worker.perfmon.JobMetrics;
+import org.backmeup.worker.utils.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,7 +74,7 @@ public class BackupJobRunner {
             // Make properties global for the action loop. So the plugins can 
             // communicate (e.g. filesplit and encryption plugins)
             PluginContext pluginContext = new PluginContext();
-            pluginContext.setAttribute("org.backmeup.tmpdir", getLastSplitElement(tmpDir, "/"));
+            pluginContext.setAttribute("org.backmeup.tmpdir", StringUtils.getLastSplitElement(tmpDir, "/"));
             pluginContext.setAttribute("org.backmeup.userid", backupJob.getUser().getUserId().toString());
 
             // TODO: Remove this workaround for indexing action
@@ -89,22 +88,9 @@ public class BackupJobRunner {
 
             // Download from source -------------------------------------------
             LOGGER.info("Job {} downloading", backupJob.getId());
-            source.downloadAll(backupJob.getSource(), pluginContext, storage, new JobStatusProgressor(backupJob, "datasource"));
+            source.downloadAll(backupJob.getSource(), pluginContext, storage, new LoggerProgressor(backupJob, "datasource"));
             this.bytesReceived.increment(storage.getDataObjectSize());
             this.objectsReceived.increment(storage.getDataObjectCount());
-
-            // if no actions are specified for this backup job,
-            // initialize field with empty list
-            if (backupJob.getActions() == null) {
-                backupJob.setActions(new ArrayList<PluginProfileDTO>());
-            }
-
-            // add all properties which have been stored to the params collection
-            for (PluginProfileDTO actionProfile : backupJob.getActions()) {
-                //                Properties actionPropertiesProps = authenticationData.getByProfileId(actionProfile.getProfileId());
-                //                Map<String, String> actionProperties = convertPropertiesToMap(actionPropertiesProps);
-                //                params.putAll(actionProperties);
-            }
 
             // Execute actions in sequence ------------------------------------
             LOGGER.info("Job {} processing", backupJob.getId());
@@ -150,14 +136,14 @@ public class BackupJobRunner {
                                 pluginContext.setAttribute(Metadata.STORAGE_ALWAYS_ACCESSIBLE, p.get(Metadata.STORAGE_ALWAYS_ACCESSIBLE));
                                 pluginContext.setAttribute(Metadata.DOWNLOAD_BASE, p.get(Metadata.DOWNLOAD_BASE));
                             }
-                            pluginContext.setAttribute("org.backmeup.bmuprefix", getLastSplitElement(tmpDir, "/"));
+                            pluginContext.setAttribute("org.backmeup.bmuprefix", StringUtils.getLastSplitElement(tmpDir, "/"));
                             pluginContext.setAttribute("org.backmeup.thumbnails.tmpdir",
-                                    "/data/thumbnails/" + getLastSplitElement(tmpDir, "/"));
+                                    "/data/thumbnails/" + StringUtils.getLastSplitElement(tmpDir, "/"));
                             doIndexing(actionProfile, pluginContext, storage, backupJob);
                         }
                     } else {
                         action = this.pluginManager.getAction(actionId);
-                        action.doAction(actionProfile, pluginContext, storage, new JobStatusProgressor(backupJob, "action"));
+                        action.doAction(actionProfile, pluginContext, storage, new LoggerProgressor(backupJob, "action"));
                     }
                 } catch (ActionException e) {
                     LOGGER.info("Job {} processing action {} failed with exception: {}", backupJob.getId(), actionId, e);
@@ -166,7 +152,7 @@ public class BackupJobRunner {
 
             // Upload to sink -------------------------------------------------
             LOGGER.info("Job {} uploading", backupJob.getId());
-            sink.upload(backupJob.getSink(), pluginContext, storage, new JobStatusProgressor(backupJob, "datasink"));
+            sink.upload(backupJob.getSink(), pluginContext, storage, new LoggerProgressor(backupJob, "datasink"));
             this.bytesSent.increment(storage.getDataObjectSize());
             this.objectsSent.increment(storage.getDataObjectCount());
 
@@ -193,11 +179,11 @@ public class BackupJobRunner {
             throws ActionException, StorageException {
         // If we do indexing, the Thumbnail renderer needs to run before!
         Action thumbnailAction = this.pluginManager.getAction("org.backmeup.thumbnail");
-        thumbnailAction.doAction(profile, context, storage, new JobStatusProgressor(job, "thumbnailAction"));
+        thumbnailAction.doAction(profile, context, storage, new LoggerProgressor(job, "thumbnailAction"));
 
         // After thumbnail rendering, run indexing
         Action indexAction = this.pluginManager.getAction("org.backmeup.indexing");
-        indexAction.doAction(profile, context, storage, new JobStatusProgressor(job, "indexaction"));
+        indexAction.doAction(profile, context, storage, new LoggerProgressor(job, "indexaction"));
     }
 
     private String generateTmpDirName(BackupJobExecutionDTO job, PluginProfileDTO profile) {
@@ -207,37 +193,11 @@ public class BackupJobRunner {
         Long profileid = profile.getProfileId();
         Long jobid = job.getId();
         // Take only last part of "org.backmeup.xxxx" (xxxx)
-        String profilename = getLastSplitElement(profile.getPluginId(), "\\.");
+        String profilename = StringUtils.getLastSplitElement(profile.getPluginId(), "\\.");
 
         formatter = new SimpleDateFormat(this.backupNameTemplate.replaceAll("%PROFILEID%", profileid.toString()).replaceAll("%SOURCE%",
                 profilename));
 
         return this.jobTempDir + "/" + jobid + "/" + formatter.format(date);
-    }
-
-    private String getLastSplitElement(String text, String regex) {
-        String[] parts = text.split(regex);
-
-        if (parts.length > 0) {
-            return parts[parts.length - 1];
-        } else {
-            return text;
-        }
-    }
-
-    private class JobStatusProgressor implements Progressable {
-
-        private final BackupJobExecutionDTO job;
-        private final String category;
-
-        public JobStatusProgressor(BackupJobExecutionDTO job, String category) {
-            this.job = job;
-            this.category = category;
-        }
-
-        @Override
-        public void progress(String message) {
-            LOGGER.info("Job {} [{}] {}", this.job.getId(), this.category, message);
-        }
     }
 }
