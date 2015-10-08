@@ -67,12 +67,12 @@ public class WorkerCore {
     // Constructor ------------------------------------------------------------
 
     public WorkerCore() {
-        this.workerId = Configuration.getProperty("backmeup.worker.id");
+        this.workerId = Configuration.getProperty("backmeup.worker.appId");
         if (StringUtils.isEmpty(this.workerId)) {
             throw new WorkerException("Worker id is not set");
         }
 
-        this.workerSecret = Configuration.getProperty("backmeup.worker.secret");
+        this.workerSecret = Configuration.getProperty("backmeup.worker.appSecret");
         if (StringUtils.isEmpty(this.workerSecret)) {
             throw new WorkerException("Worker secret is not set");
         }
