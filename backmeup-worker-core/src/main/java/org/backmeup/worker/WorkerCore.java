@@ -4,7 +4,6 @@ import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.StringTokenizer;
-import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
@@ -37,7 +36,7 @@ import com.netflix.servo.monitor.NumberGauge;
 public class WorkerCore {
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkerCore.class);
     private static final int WORKER_CONFIG_TIMEOUT_SECONDS = 60;
-    
+
     private final String workerId;
     private final String workerSecret;
     private String workerName;
@@ -50,10 +49,10 @@ public class WorkerCore {
     private final AtomicInteger noOfFetchedJobs;
     private final AtomicInteger noOfFinishedJobs;
     private final AtomicInteger noOfFaildJobs;
-    
-    @SuppressWarnings({"unused", "PMD.SingularField"})
+
+    @SuppressWarnings({ "unused", "PMD.SingularField" })
     private final NumberGauge maxJobsGauge;
-    @SuppressWarnings({"unused", "PMD.SingularField"})
+    @SuppressWarnings({ "unused", "PMD.SingularField" })
     private final NumberGauge noOfRunningJobsGauge;
 
     private PluginManager pluginManager;
@@ -72,10 +71,10 @@ public class WorkerCore {
         if (StringUtils.isEmpty(this.workerId)) {
             throw new WorkerException("Worker id is not set");
         }
-        
+
         this.workerSecret = Configuration.getProperty("backmeup.worker.secret");
-        if (StringUtils.isEmpty(workerSecret)) {
-            throw new WorkerException("Worker id is not set");
+        if (StringUtils.isEmpty(this.workerSecret)) {
+            throw new WorkerException("Worker secret is not set");
         }
 
         String wName = Configuration.getProperty("backmeup.worker.name");
@@ -91,10 +90,10 @@ public class WorkerCore {
         }
 
         this.maxWorkerThreads = Integer.parseInt(Configuration.getProperty("backmeup.worker.maxParallelJobs"));
-        this.maxJobsGauge = new NumberGauge(MonitorConfig.builder("maxJobs").build(), maxWorkerThreads);
-        
+        this.maxJobsGauge = new NumberGauge(MonitorConfig.builder("maxJobs").build(), this.maxWorkerThreads);
+
         this.noOfRunningJobs = new AtomicInteger(0);
-        this.noOfRunningJobsGauge = new NumberGauge(MonitorConfig.builder("runningJobs").build(), noOfRunningJobs);
+        this.noOfRunningJobsGauge = new NumberGauge(MonitorConfig.builder("runningJobs").build(), this.noOfRunningJobs);
         this.noOfFetchedJobs = new AtomicInteger(0);
         this.noOfFinishedJobs = new AtomicInteger(0);
         this.noOfFaildJobs = new AtomicInteger(0);
@@ -106,10 +105,10 @@ public class WorkerCore {
 
         BlockingQueue<Runnable> jobQueue = new ArrayBlockingQueue<>(this.maxWorkerThreads);
         ThreadFactory threadFactory = Executors.defaultThreadFactory();
-        this.executorPool = new ObservableThreadPoolExecutor(this.maxWorkerThreads, this.maxWorkerThreads, 10,
-                TimeUnit.SECONDS, jobQueue, threadFactory);
-        
-        Monitors.registerObject(workerId.toString(), this);
+        this.executorPool = new ObservableThreadPoolExecutor(this.maxWorkerThreads, this.maxWorkerThreads, 10, TimeUnit.SECONDS, jobQueue,
+                threadFactory);
+
+        Monitors.registerObject(this.workerId.toString(), this);
 
         this.initialized = false;
         setCurrentState(WorkerState.OFFLINE);
@@ -149,14 +148,14 @@ public class WorkerCore {
 
     public void initialize() {
         LOGGER.info("Authenticate backmeup-worker");
-        bmuServiceClient.authenticateWorker(this.workerId, this.workerSecret);
-        
+        this.bmuServiceClient.authenticateWorker(this.workerId, this.workerSecret);
+
         LOGGER.info("Initializing backmeup-worker");
         boolean errorsDuringInit = false;
 
         WorkerInfoDTO workerInfo = getWorkerInfo();
         WorkerConfigDTO resp = getWorkerConfig(workerInfo, WORKER_CONFIG_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-        
+
         try {
             this.backupName = resp.getBackupNameTemplate();
 
@@ -167,13 +166,12 @@ public class WorkerCore {
 
                 this.jobReceiver = new RabbitMQJobReceiver(mqHost, mqName, 500);
                 this.jobReceiver.initialize();
-                this.jobReceiver
-                        .addJobReceivedListener(new JobReceivedListener() {
-                            @Override
-                            public void jobReceived(JobReceivedEvent jre) {
-                                executeBackupJob(jre);
-                            }
-                        });
+                this.jobReceiver.addJobReceivedListener(new JobReceivedListener() {
+                    @Override
+                    public void jobReceived(JobReceivedEvent jre) {
+                        executeBackupJob(jre);
+                    }
+                });
             } else {
                 // DistributionMechanism not supported
                 errorsDuringInit = true;
@@ -220,9 +218,9 @@ public class WorkerCore {
                 jobThreadAterExecute(r, t);
             }
         });
-        
+
         if (Boolean.parseBoolean(Configuration.getProperty("backmeup.worker.publishMetrics", "false"))) {
-            PerformanceMonitor.initialize(bmuServiceClient);
+            PerformanceMonitor.initialize(this.bmuServiceClient);
         } else {
             PerformanceMonitor.initialize();
         }
@@ -237,7 +235,7 @@ public class WorkerCore {
         if (!this.initialized) {
             throw new WorkerException("Worker not initialized");
         }
-        
+
         PerformanceMonitor.startPublishing();
 
         this.jobReceiver.start();
@@ -260,8 +258,8 @@ public class WorkerCore {
         }
 
         Long jobId = jre.getJobId();
-        Runnable backupJobWorker = new BackupJobWorkerThread(jobId, this.pluginManager, this.bmuServiceClient,
-                this.jobTempDir, this.backupName);
+        Runnable backupJobWorker = new BackupJobWorkerThread(jobId, this.pluginManager, this.bmuServiceClient, this.jobTempDir,
+                this.backupName);
         this.executorPool.execute(backupJobWorker);
     }
 
@@ -299,16 +297,16 @@ public class WorkerCore {
 
         return workerInfo;
     }
-    
+
     private WorkerConfigDTO getWorkerConfig(WorkerInfoDTO workerInfo, long timeout, TimeUnit timeUnit) {
         LOGGER.info("Obtaining worker config");
-        
+
         int retries = 0;
         final int sleepTime = 1000;
         final long startTime = System.currentTimeMillis();
         final long abortTime = timeUnit.toMillis(timeout);
         WorkerConfigDTO config = null;
-        
+
         while ((config == null) && ((System.currentTimeMillis() - startTime) < abortTime)) {
             try {
                 if (retries != 0) {
@@ -335,7 +333,6 @@ public class WorkerCore {
             throw new WorkerException("Failed obtaining worker configuration");
         }
     }
-    
 
     // Nested classes and enums -----------------------------------------------
 
